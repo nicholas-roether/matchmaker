@@ -8,7 +8,7 @@ export default (req, res) => NextAuth(req, res, {
 		Providers.Google({
 			clientId: process.env.GOOGLE_CLIENT_ID,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-			
+			state: false
 		})
 	],
 	// callbacks: {
