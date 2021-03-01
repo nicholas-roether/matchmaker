@@ -8,7 +8,11 @@ export default (req, res) => NextAuth(req, res, {
 		Providers.Google({
 			clientId: process.env.GOOGLE_CLIENT_ID,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-			state: false
+		}),
+		Providers.GitHub({
+			clientId: process.env.GITHUB_CLIENT_ID,
+			clientSecret: process.env.GITHUB_CLIENT_SECRET,
+			scope: "read:user,user:email"
 		})
 	],
 	// callbacks: {
