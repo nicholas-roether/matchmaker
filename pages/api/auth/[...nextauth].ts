@@ -16,20 +16,20 @@ export default (req, res) => NextAuth(req, res, {
 		Providers.GitHub({
 			clientId: process.env.GITHUB_CLIENT_ID,
 			clientSecret: process.env.GITHUB_CLIENT_SECRET,
-			scope: "read:user,user:email"
+			scope: "user"
 		})
 	],
-	// callbacks: {
-	// 	async jwt(token, _, account) {
-	// 		if(account) {
-	// 			token.id = account.id;
-	// 			token.accessToken = account.accessToken
-	// 		}
-	// 		return token;
-	// 	},
-	// 	async session(session, user) {
-	// 		session.user = user;
-	// 		return session;
-	// 	}
-	// }
+	callbacks: {
+		async jwt(token, _, account) {
+			if(account) {
+				token.id = account.id;
+				token.accessToken = account.accessToken
+			}
+			return token;
+		},
+		async session(session, user) {
+			session.user = user;
+			return session;
+		}
+	}
 });
