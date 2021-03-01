@@ -1,5 +1,5 @@
 import { Box, Button, Container } from '@material-ui/core';
-import { signIn, useSession } from 'next-auth/client';
+import { signIn, signOut, useSession } from 'next-auth/client';
 import Head from 'next/head'
 import React from 'react';
 
@@ -17,7 +17,12 @@ const Home = () => {
           Page under construction
           <br />
           {
-            session ? JSON.stringify(session.user) :
+            session ? (
+              <>
+                <code>{JSON.stringify(session.user)}</code>
+                <Button variant="contained" color="primary" onClick={() => signOut()}>Logout</Button>
+              </>
+            ) :
             <Button variant="contained" color="primary" onClick={() => signIn()}>Login</Button>
           }
         </Box>
