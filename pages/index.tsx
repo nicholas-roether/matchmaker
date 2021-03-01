@@ -5,6 +5,7 @@ import React from 'react';
 
 const Home = () => {
   const [session, loading] = useSession();
+  if(loading) return null;
   return (
     <>
       <Head>
@@ -16,8 +17,7 @@ const Home = () => {
           Page under construction
           <br />
           {
-            loading ? "Loading..." :
-            session.user ? JSON.stringify(session.user) :
+            session ? JSON.stringify(session.user) :
             <Button variant="contained" color="primary" onClick={() => signIn()}>Login</Button>
           }
         </Box>
