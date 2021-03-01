@@ -3,10 +3,7 @@ import Providers from "next-auth/providers";
 
 export default (req, res) => NextAuth(req, res, {
 	debug: true,
-	database: {
-		type: "mongodb",
-		url: process.env.AUTH_DATABASE_URL
-	},
+	database: process.env.AUTH_DATABASE_URL,
 	providers: [
 		Providers.Google({
 			clientId: process.env.GOOGLE_CLIENT_ID,
