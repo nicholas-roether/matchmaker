@@ -7,7 +7,9 @@ class MyDocument extends Document {
 		return (
 			<React.StrictMode>
 				<Html lang="en">
-					<Head />
+					<Head>
+						<meta charSet="utf-8" />
+					</Head>
 					<body>
 						<Main />
 						<NextScript />
