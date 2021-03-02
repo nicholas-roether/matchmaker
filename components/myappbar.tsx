@@ -1,17 +1,19 @@
-import { AppBar, Box, IconButton, Toolbar, Typography } from "@material-ui/core";
+import { AppBar, Box, IconButton, Toolbar, Typography, useMediaQuery, useTheme } from "@material-ui/core";
 import { MenuTwoTone as MenuIcon } from "@material-ui/icons";
 import React from "react";
 import UserDisplay from "./user_display";
 
 const MyAppBar = () => {
+	const theme = useTheme();
+	const mobile = useMediaQuery(theme.breakpoints.down("sm"));
 	return (
 		<AppBar>
 			<Toolbar>
 				<IconButton edge="start"><MenuIcon /></IconButton>
 				<Box mr={1} />
-				<Typography variant="h5">Matchmaker</Typography>
+				<Typography variant={mobile ? "h6" : "h5"}>Matchmaker</Typography>
 				<Box flexGrow={1} />
-				<UserDisplay />
+				<UserDisplay mobile={mobile} />
 			</Toolbar>
 		</AppBar>
 	)
