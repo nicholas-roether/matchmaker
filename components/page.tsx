@@ -5,12 +5,13 @@ import MyAppBar from "./myappbar";
 const useStyles = makeStyles(theme => ({
 	wrapper: {
 		background: theme.palette.background.default,
+		color: theme.palette.type === "light" ? "#000" : "#fff",
 		minHeight: "100vh"
 	}
 }))
 
 export interface PageProps {
-	children: JSX.Element
+	children: React.ReactNode
 }
 
 const Page = ({children}: PageProps) => {
