@@ -16,8 +16,12 @@ const UserDisplay = ({mobile = false}: UserDisplayProps) => {
 		<>
 			{session.user.image && <Avatar src={session.user.image} alt={session.user.name} />}
 			<Box mr={1} />
-			{mobile || <span>{session.user.name}</span>}
-			<Box mr={2} />
+			{mobile || (
+				<>
+					<span>{session.user.name}</span>
+					<Box mr={2} />
+				</>
+			)}
 			<Button variant="outlined" onClick={() => signOut()}>Sign Out</Button>
 		</>
 	)
