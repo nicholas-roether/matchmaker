@@ -6,7 +6,7 @@ const UserDisplay = () => {
 	const [session, loading] = useSession();
 	if(loading) return <CircularProgress />;
 	if(!session) return (
-		<Button variant="contained" color="secondary" onClick={() => signIn()}>Sign In</Button>
+		<Button variant="contained" onClick={() => signIn()}>Sign In</Button>
 	)
 	return (
 		<>
