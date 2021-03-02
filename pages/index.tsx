@@ -1,30 +1,30 @@
-import { Box, Button, Container } from '@material-ui/core';
-import { signIn, signOut, useSession } from 'next-auth/client';
+import { Box, Button, Container, Typography } from '@material-ui/core';
+import { signIn } from 'next-auth/client';
 import Head from 'next/head'
 import React from 'react';
 
 const Home = () => {
-	const [session, loading] = useSession();
-	if(loading) return null;
 	return (
 		<>
 			<Head>
 				<title>Matchmaker | Home</title>
-				<link rel="icon" href="/favicon.ico" />
 			</Head>
-			<Container maxWidth="lg" component="main">
-				<Box mt={3} textAlign="center">
-					Page under construction
-					<br />
-					{
-						session ? (
-							<>
-								<code>{JSON.stringify(session.user)}</code>
-								<Button variant="contained" color="primary" onClick={() => signOut()}>Logout</Button>
-							</>
-						) :
-						<Button variant="contained" color="primary" onClick={() => signIn()}>Login</Button>
-					}
+			<Container maxWidth="md">
+				<Box mt={8} textAlign="center" marginX="auto">
+					<Typography variant="h2" gutterBottom>
+						Organize tournaments,<br />
+						the easy way.
+					</Typography>
+					<Typography paragraph style={{fontSize: "1.7em"}}>
+						With Matchmaker, you can organize tournaments of any scale,
+						for free! Let us handle the organizational hassle while you
+						enjoy the competition.
+					</Typography>
+					<Box mt={3}>
+						<Button variant="contained" color="primary" size="large" onClick={() => signIn()}>Get Started</Button>
+						<Box mr={1} display="inline" />
+						<Button variant="outlined" color="primary" size="large">Watch Tutorial</Button>
+					</Box>
 				</Box>
 			</Container>
 		</>
