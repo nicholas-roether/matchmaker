@@ -13,7 +13,7 @@ const UserDisplay = () => {
 			{session.user.image && <Avatar src={session.user.image} alt={session.user.name} />}
 			<Box mr={1} />
 			<span>{session.user.name}</span>
-			<Box mr={1} />
+			<Box mr={2} />
 			<Button variant="outlined" onClick={() => signOut()}>Sign Out</Button>
 		</>
 	)
