@@ -7,7 +7,7 @@ const MyAppBar = () => {
 	const theme = useTheme();
 	const mobile = useMediaQuery(theme.breakpoints.down("sm"));
 	return (
-		<AppBar>
+		<AppBar position="sticky">
 			<Toolbar>
 				<IconButton edge="start"><MenuIcon /></IconButton>
 				<Box mr={1} />
