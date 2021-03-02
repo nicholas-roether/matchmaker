@@ -2,7 +2,6 @@ import NextAuth from "next-auth";
 import Providers from "next-auth/providers";
 
 export default (req, res) => NextAuth(req, res, {
-	debug: true,
 	database: {
 		type: "mongodb",
 		url: process.env.AUTH_DATABASE_URL,
