@@ -1,6 +1,6 @@
 import { Container, makeStyles } from "@material-ui/core";
 import React from "react";
-import MyAppBar from "./myappbar";
+import MyAppBar from "./myappbar/myappbar";
 
 const useStyles = makeStyles(theme => ({
 	wrapper: {
