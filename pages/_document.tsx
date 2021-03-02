@@ -1,6 +1,7 @@
 import React from "react";
 import Document, { DocumentContext, DocumentInitialProps, Head, Html, Main, NextScript } from "next/document";
 import { ServerStyleSheets } from "@material-ui/core";
+import theme from "../src/constants/theme";
 
 class MyDocument extends Document {
 	render() {
@@ -8,7 +9,7 @@ class MyDocument extends Document {
 			<React.StrictMode>
 				<Html lang="en">
 					<Head />
-					<body>
+					<body style={{background: theme.palette.background.default}}>
 						<Main />
 						<NextScript />
 					</body>
