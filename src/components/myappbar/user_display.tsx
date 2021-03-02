@@ -3,10 +3,10 @@ import { signIn, signOut, useSession } from "next-auth/client";
 import React from "react";
 
 export interface UserDisplayProps {
-	mobile?: boolean
+	tiny?: boolean
 }
 
-const UserDisplay = ({mobile = false}: UserDisplayProps) => {
+const UserDisplay = ({tiny = false}: UserDisplayProps) => {
 	const [session, loading] = useSession();
 	if(loading) return <CircularProgress />;
 	if(!session) return (
@@ -16,7 +16,7 @@ const UserDisplay = ({mobile = false}: UserDisplayProps) => {
 		<>
 			{session.user.image && <Avatar src={session.user.image} alt={session.user.name} />}
 			<Box mr={1} />
-			{mobile || (
+			{tiny || (
 				<>
 					<span>{session.user.name}</span>
 					<Box mr={2} />
