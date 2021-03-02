@@ -1,8 +1,8 @@
 import { CssBaseline, makeStyles, ThemeProvider } from "@material-ui/core";
 import Head from "next/head"
 import React from "react"
-import Page from "../components/page";
-import theme from "../constants/theme";
+import Page from "../src/components/page";
+import theme from "../src/constants/theme";
 
 
 function MyApp({ Component, pageProps }) {
