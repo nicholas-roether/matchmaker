@@ -40,7 +40,8 @@ export interface PageProps {
 const Page = ({children}: PageProps) => {
 	const classes = useStyles();
 	const theme = useTheme();
-	const mobile = useMediaQuery(theme.breakpoints.down("md"));
+	// Prioritize mobile stylings to prevent display issues during load
+	const mobile = !useMediaQuery(theme.breakpoints.up("sm"));
 	const [menuOpen, setMenuOpen] = React.useState(false);
 	return (
 		<div className={classes.wrapper}>
