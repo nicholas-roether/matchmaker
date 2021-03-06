@@ -7,9 +7,10 @@ import { TournamentState } from "./tournament_state";
 export interface TournamentUserInit {
 	id: string;
 	name: string;
-	image: string;
-	isStreamer: boolean;
-	isModerator: boolean;
+	image?: string;
+	isStreamer?: boolean;
+	isModerator?: boolean;
+	hidden?: boolean;
 }
 
 class TournamentUser extends ChangeNotifier {
@@ -18,14 +19,22 @@ class TournamentUser extends ChangeNotifier {
 	public readonly image: string;
 	private _isStreamer: boolean;
 	private _isModerator: boolean;
+	private _hidden: boolean;
 
-	constructor({id, name, image, isStreamer, isModerator}: TournamentUserInit) {
+	constructor({id,
+		name,
+		image,
+		isStreamer = false,
+		isModerator = false,
+		hidden = false
+	}: TournamentUserInit) {
 		super();
 		this.id = id;
 		this.name = name;
 		this.image = image;
 		this._isStreamer = isStreamer;
 		this._isModerator = isModerator;
+		this._hidden = hidden;
 	}
 
 	public get isStreamer() { return this._isStreamer; }
@@ -41,11 +50,19 @@ class TournamentUser extends ChangeNotifier {
 		this._isModerator = newIsModerator;
 		this.notify("isModerator");
 	}
+
+	public get hidden() { return this._hidden; }
+
+	public set hidden(value) {
+		this._hidden = value;
+		this.notify("hidden");
+	}
 }
 
 export type TournamentPhase = "planned" | "qualification" | "post-qualification" | "group" | "main" | "finished";
 
 export interface TournamentInit<C extends Competitor> {
+	id: string;
 	name: string;
 	description?: string;
 	logo?: string;
@@ -55,12 +72,13 @@ export interface TournamentInit<C extends Competitor> {
 	layout: TournamentLayout;
 	phase?: TournamentPhase;
 	state?: TournamentState<C>;
-	isInitialState?: boolean,
 	groups?: C[][],
-	startingMatchups?: C[][]
+	startingMatchups?: C[][],
+	users?: TournamentUser[]
 }
 
 class TournamentModel<C extends Competitor> extends ChangeNotifier {
+	public readonly id: string;
 	public readonly name: string;
 	public readonly description?: string;
 	public readonly logo?: string;
@@ -73,19 +91,23 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 	private _phase: TournamentPhase;
 	private _state: TournamentState<C> = null;
 	private _isInitialState: boolean;
+	private _users: TournamentUser[];
 
-	constructor({name,
+	constructor({
+		id,
+		name,
 		description,
 		logo,
 		competitors,
 		layout,
 		phase = "planned",
 		state,
-		isInitialState = true,
 		groups = null,
-		startingMatchups = null
+		startingMatchups = null,
+		users = []
 	}: TournamentInit<C>) {
 		super();
+		this.id = id;
 		this.name = name;
 		this.description = description;
 		this.logo = logo;
@@ -97,7 +119,7 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 			this._startingMatchups = startingMatchups;
 		this._phase = phase;
 		this._state = state;
-		this._isInitialState = isInitialState;
+		this._users = users;
 		this.pass(state);
 		this.addListener(evt => {
 			if(evt.property == "state") this.pass(this._state);
@@ -165,6 +187,17 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 		const matchup2 = this.getStartingMatchupOf(competitor2);
 		if(!matchup1 || !matchup2) throw new Error("Could not find competitor");
 		swapBetween(competitor1, competitor2, matchup1, matchup2);
+	}
+
+	public get users() { return this._users; }
+
+	public set users(value) {
+		this._users = value;
+		this.notify("users");
+	}
+
+	public addUser(user: TournamentUser) {
+		this.users = [...this.users, user];
 	}
 
 	private canModifyStartingPositions() {
