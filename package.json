@@ -14,6 +14,8 @@
   "dependencies": {
     "@material-ui/core": "^4.11.3",
     "@material-ui/icons": "^4.11.2",
+    "mongodb": "^3.6.4",
+    "mongoose": "^5.11.19",
     "next": "10.0.7",
     "next-auth": "^3.6.0",
     "react": "17.0.1",
@@ -25,7 +27,5 @@
     "@types/react": "^17.0.2",
     "typescript": "^4.2.2"
   },
-  "optionalDependencies": {
-    "mongodb": "^3.6.4"
-  }
+  "optionalDependencies": {}
 }
