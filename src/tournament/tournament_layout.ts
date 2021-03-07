@@ -1,9 +1,9 @@
 import { divides, isPowerOf, nextLowerPowerOf } from "../utils/math_utils";
 
 export interface TournamentLayoutInit {
-	competitors: number;
+	numCompetitors: number;
 	hasGroupPhase: boolean;
-	groups?: number;
+	numGroups?: number;
 	winnersPerGroup?: number;
 	hasQualificationPhase: boolean;
 	competitorsAfterQualification?: number;
@@ -19,24 +19,24 @@ class InvalidTournamentError extends Error {
 }
 
 class TournamentLayout {
-	public readonly competitors: number;
+	public readonly numCompetitors: number;
 	public readonly hasGroupPhase: boolean;
-	public readonly groups?: number;
+	public readonly numGroups?: number;
 	public readonly winnersPerGroup?: number;
 	public readonly hasQualificationPhase: boolean;
 	public readonly competitorsAfterQualification?: number;
 
 	constructor({
-		competitors,
+		numCompetitors: competitors,
 		hasGroupPhase,
-		groups,
+		numGroups,
 		winnersPerGroup,
 		hasQualificationPhase,
 		competitorsAfterQualification
 	}: TournamentLayoutInit) {
-		this.competitors = competitors;
+		this.numCompetitors = competitors;
 		this.hasGroupPhase = hasGroupPhase;
-		this.groups = groups;
+		this.numGroups = numGroups;
 		this.winnersPerGroup = winnersPerGroup;
 		this.hasQualificationPhase = hasQualificationPhase;
 		this.competitorsAfterQualification = competitorsAfterQualification;
@@ -47,23 +47,23 @@ class TournamentLayout {
 
 	private isValid(): boolean {
 		if(this.hasGroupPhase) {
-			if(!isPowerOf(this.groups, 2)) return false;
+			if(!isPowerOf(this.numGroups, 2)) return false;
 			if(!isPowerOf(this.winnersPerGroup, 2)) return false;
-		} else if(!isPowerOf(this.competitors, 2)) {
+		} else if(!isPowerOf(this.numCompetitors, 2)) {
 			return false;
 		}
 
 		const beforeGroups = this.hasQualificationPhase 
 			? this.competitorsAfterQualification
-			: this.competitors;
-		if(!divides(this.groups, beforeGroups)) return false;
-		if(beforeGroups / this.groups >= this.winnersPerGroup) return false;
+			: this.numCompetitors;
+		if(!divides(this.numGroups, beforeGroups)) return false;
+		if(beforeGroups / this.numGroups >= this.winnersPerGroup) return false;
 		return true;
 	}
 
 	public get groupSize() {
-		if(this.groups !== null)
-			return this.competitors / this.groups;
+		if(this.numGroups !== null)
+			return this.numCompetitors / this.numGroups;
 	}
 
 	/**
@@ -103,9 +103,9 @@ class TournamentLayout {
 		}
 		const hasGroupPhase = competitors > 4;
 		return new TournamentLayout({
-			competitors,
+			numCompetitors: competitors,
 			hasGroupPhase: hasGroupPhase,
-			groups: hasGroupPhase ? nextLowerPowerOf(competitors / 4, 2) : null,
+			numGroups: hasGroupPhase ? nextLowerPowerOf(competitors / 4, 2) : null,
 			winnersPerGroup: 2,
 			hasQualificationPhase,
 			competitorsAfterQualification
