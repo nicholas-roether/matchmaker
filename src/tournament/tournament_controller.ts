@@ -2,7 +2,7 @@ import { group } from "console";
 import { collapseNestedArray, createGroups, createPairs, groupByIndex } from "../utils/data_utils";
 import { isPowerOf } from "../utils/math_utils";
 import { Competitor } from "./competitor";
-import TournamentModel from "./tournament_model";
+import TournamentModel, { TournamentPhase } from "./tournament_model";
 import {
 	FinishedTournamentState,
 	GroupTournamentState,
@@ -25,51 +25,49 @@ class TournamentController<C extends Competitor> {
 
 	public advancePhase() {
 		switch(this.tournament.phase) {
-			case "planned":
-				this.tournament.isInitialState = true;
+			case TournamentPhase.PLANNED:
 				if(this.tournament.layout.hasQualificationPhase)
 					this.advanceToQualification();
 				else if(this.tournament.layout.hasGroupPhase) {
-					const groups: C[][] = this.tournament.groups || createGroups(this.tournament.competitors, this.tournament.layout.groupSize);
-					this.advanceToGroup(groups);
+					this.advanceToGroup(this.tournament.groups);
 				} else
-					this.advanceToMain(this.tournament.competitors);
+					this.advanceToMain(collapseNestedArray(this.tournament.startingMatchups));
 				break;
-			case "qualification":
-				this.tournament.isInitialState = true;
+			case TournamentPhase.QUALIFICATION:
+				this.tournament.phase = TournamentPhase.POST_QUALIFICATION;
 				const winners = this.tournament.state.qualificationState.getWinners().map(w => w.competitor);
 				if(this.tournament.layout.hasGroupPhase)
-					this.advanceToGroup(createGroups(this.tournament.competitors, this.tournament.layout.groupSize));
+					this.tournament.groups = createGroups(winners, this.tournament.layout.groupSize);
 				else
-					this.advanceToMain(winners);
+					this.tournament.startingMatchups = createGroups(winners, 2);
 				break;
-			case "group":
-				this.tournament.isInitialState = false;
+			case TournamentPhase.POST_QUALIFICATION:
+				if(this.tournament.layout.hasGroupPhase)
+					this.advanceToGroup(this.tournament.groups);
+				else
+					this.advanceToMain(collapseNestedArray(this.tournament.startingMatchups));
+				break;
+			case TournamentPhase.GROUP:
 				const result = this.tournament.state.groupState.getResult();
 				const matchups = this.matchupsFromGroupResult(result);
 				const competitors = collapseNestedArray(matchups);
 				this.advanceToMain(competitors);
 				break;
-			case "main":
-				this.tournament.isInitialState = false;
+			case TournamentPhase.FINISHED:
 				this.advanceToFinished(this.tournament.state.mainState.tree.match.getWinner().competitor);
 		}
-	}
-	
-	public swapCompetitorStarts(competitor1: C, competitor2: C) {
-		
 	}
 
 	private matchupsFromGroupResult(result: ScoreboardEntry<C>[][]) {
 		const winners: C[][] = result.map(r => r.map(s => s.competitor));
 		const byPlacement: C[][] = groupByIndex(winners, this.tournament.layout.winnersPerGroup);
 		byPlacement[1] = [...byPlacement[1].slice(1), byPlacement[1][0]];
-		const matchups = groupByIndex(byPlacement, this.tournament.layout.groups);
+		const matchups = groupByIndex(byPlacement, this.tournament.layout.numGroups);
 		return matchups;
 	}
 
 	private advanceToQualification() {
-		this.tournament.phase = "qualification";
+		this.tournament.phase = TournamentPhase.QUALIFICATION;
 		this.tournament.state.qualificationState = TournamentController.createQualificationState(
 			this.tournament.competitors,
 			this.tournament.layout.competitorsAfterQualification
@@ -77,7 +75,7 @@ class TournamentController<C extends Competitor> {
 	}
 
 	private advanceToGroup(groups: C[][]) {
-		this.tournament.phase = "group";
+		this.tournament.phase = TournamentPhase.GROUP;
 		this.tournament.state.groupState = TournamentController.createGroupState(
 			groups,
 			this.tournament.layout.winnersPerGroup
@@ -85,12 +83,12 @@ class TournamentController<C extends Competitor> {
 	}
 
 	private advanceToMain(competitors: C[]) {
-		this.tournament.phase = "main";
-		this.tournament.state.mainState = TournamentController.createMainState(this.tournament.competitors);
+		this.tournament.phase = TournamentPhase.MAIN;
+		this.tournament.state.mainState = TournamentController.createMainState(competitors);
 	}
 
 	private advanceToFinished(winner: C) {
-		this.tournament.phase = "finished";
+		this.tournament.phase = TournamentPhase.FINISHED;
 		this.tournament.state.finishedState = new FinishedTournamentState(winner);
 	}
 
