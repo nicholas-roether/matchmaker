@@ -13,11 +13,13 @@ class InvalidTournamentStateError extends Error {
 
 class ScoreboardEntry<C extends Competitor> extends ChangeNotifier {
 	public readonly competitor: C;
+	private _wins: number;
 	private _score: number;
 
-	constructor(competitor: C, score: number = 0) {
+	constructor(competitor: C, wins: number = 0, score: number = 0) {
 		super();
 		this.competitor = competitor;
+		this._wins = wins;
 		this._score = score;
 	}
 
@@ -26,6 +28,13 @@ class ScoreboardEntry<C extends Competitor> extends ChangeNotifier {
 	public set score(newScore) {
 		this._score = newScore;
 		this.notify("score");
+	}
+
+	public get wins() { return this._wins; }
+
+	public set wins(value) {
+		this._wins = value;
+		this.notify("wins");
 	}
 }
 
@@ -42,7 +51,7 @@ class Scoreboard<C extends Competitor> extends ChangeNotifier {
 		return this.entries.sort((a, b) => a.score - b.score).slice(0, number);
 	}
 
-	public getScore(competitor: C): number | null {
+	public getScore(competitor: C): number {
 		const scoredCompetitor = this.findScoredCompetitor(competitor);
 		return scoredCompetitor.score;
 	}
@@ -51,6 +60,25 @@ class Scoreboard<C extends Competitor> extends ChangeNotifier {
 		const scoredCompetitor = this.findScoredCompetitor(competitor);
 		if(typeof setter == "number") scoredCompetitor.score = setter;
 		else scoredCompetitor.score = setter(scoredCompetitor.score);
+	}
+
+	public addScore(competitor: C, score: number) {
+		this.setScore(competitor, prev => prev + score);
+	}
+
+	public getWins(competitor: C): number {
+		const scoredCompetitor = this.findScoredCompetitor(competitor);
+		return scoredCompetitor.wins;
+	}
+
+	public setWins(competitor: C, setter: number | ((prev: number) => number)) {
+		const scoredCompetitor = this.findScoredCompetitor(competitor);
+		if(typeof setter == "number") scoredCompetitor.score = setter;
+		else scoredCompetitor.score = setter(scoredCompetitor.score);
+	}
+
+	public addWins(competitor: C, wins: number) {
+		this.setWins(competitor, prev => prev + wins);
 	}
 
 	public get competitors(): C[] { return this.entries.map(e => e.competitor); }
