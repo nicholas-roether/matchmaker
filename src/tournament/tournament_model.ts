@@ -59,10 +59,18 @@ class TournamentUser extends ChangeNotifier {
 	}
 }
 
-export type TournamentPhase = "planned" | "qualification" | "post-qualification" | "group" | "main" | "finished";
+export enum TournamentPhase {
+	PLANNED = "planned",
+	QUALIFICATION = "qualification",
+	POST_QUALIFICATION = "post-qualification",
+	GROUP = "group",
+	MAIN = "main",
+	FINISHED = "finished"
+}
 
 export interface TournamentInit<C extends Competitor> {
 	id: string;
+	owner: string;
 	name: string;
 	description?: string;
 	logo?: string;
@@ -86,21 +94,22 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 	public readonly qualificationTime?: Date;
 	public readonly competitors: C[];
 	public readonly layout: TournamentLayout;
+	private _owner: string;
 	private _groups?: C[][];
 	private _startingMatchups?: C[][];
 	private _phase: TournamentPhase;
 	private _state: TournamentState<C> = null;
-	private _isInitialState: boolean;
 	private _users: TournamentUser[];
 
 	constructor({
 		id,
+		owner,
 		name,
 		description,
 		logo,
 		competitors,
 		layout,
-		phase = "planned",
+		phase = TournamentPhase.FINISHED,
 		state,
 		groups = null,
 		startingMatchups = null,
@@ -117,6 +126,7 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 			this._groups = groups;
 		if(!this.layout.hasGroupPhase)
 			this._startingMatchups = startingMatchups;
+		this._owner = owner;
 		this._phase = phase;
 		this._state = state;
 		this._users = users;
@@ -126,6 +136,13 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 		});
 		if(this.groups) this.checkCompetitorValidity(...collapseNestedArray(this.groups));
 		if(this.startingMatchups) this.checkCompetitorValidity(...collapseNestedArray(this.startingMatchups));
+	}
+
+	public get owner() { return this._owner; }
+
+	public set owner(value) {
+		this._owner = value;
+		this.notify("owner");
 	}
 	
 	public get phase() { return this._phase; }
@@ -140,13 +157,6 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 	public set state(newState) {
 		this._state = newState;
 		this.notify("state");
-	}
-
-	public get isInitialState() { return this._isInitialState; }
-
-	public set isInitialState(newIsInitialState) {
-		this._isInitialState = newIsInitialState;
-		this.notify("isInitialState");
 	}
 
 	public get groups() { return this._groups; }
