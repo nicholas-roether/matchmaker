@@ -27,10 +27,10 @@ class ChangeNotifier extends EventTarget {
 	}
 
 	public addListener(listener: ChangeListener, passedNotifies = false) {
-		this.removeEventListener("change", listener);
-		this.removeEventListener("passedchange", listener);
-		this.addEventListener("change", listener);
-		if(passedNotifies) this.addEventListener("passedchange", listener);
+		this.removeEventListener("change", e => listener(e as ChangeEvent));
+		this.removeEventListener("passedchange", e => listener(e as ChangeEvent));
+		this.addEventListener("change", e => listener(e as ChangeEvent));
+		if(passedNotifies) this.addEventListener("passedchange", e => listener(e as ChangeEvent));
 	}
 }
 
