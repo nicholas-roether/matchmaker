@@ -2,6 +2,7 @@ import { group } from "console";
 import { collapseNestedArray, createGroups, createPairs, groupByIndex } from "../utils/data_utils";
 import { isPowerOf } from "../utils/math_utils";
 import { Competitor } from "./competitor";
+import TournamentDBAdapter from "./tournament_db_adapter";
 import TournamentModel, { TournamentPhase } from "./tournament_model";
 import {
 	FinishedTournamentState,
@@ -16,11 +17,30 @@ import {
 	TournamentGroup
 } from "./tournament_state";
 
-class TournamentController<C extends Competitor> {
+abstract class TournamentSyncAdapter<C extends Competitor> {
 	public readonly tournament: TournamentModel<C>;
 
 	constructor(tournament: TournamentModel<C>) {
 		this.tournament = tournament;
+	}
+
+	public abstract save(): void;
+}
+
+export enum TournamentSyncType {
+	DATABASE,
+	REST,
+	NONE
+}
+
+class TournamentController<C extends Competitor> {
+	public readonly tournament: TournamentModel<C>;
+	private readonly adapter?: TournamentSyncAdapter<C>;
+
+	constructor(tournament: TournamentModel<C>, syncType: TournamentSyncType) {
+		this.tournament = tournament;
+		if(syncType == TournamentSyncType.DATABASE)
+			this.adapter = new TournamentDBAdapter(tournament);
 	}
 
 	public advancePhase() {
@@ -29,7 +49,7 @@ class TournamentController<C extends Competitor> {
 				if(this.tournament.layout.hasQualificationPhase)
 					this.advanceToQualification();
 				else if(this.tournament.layout.hasGroupPhase) {
-					this.advanceToGroup(this.tournament.groups);
+					this.advanceToGroup(this.tournament.startingMatchups);
 				} else
 					this.advanceToMain(collapseNestedArray(this.tournament.startingMatchups));
 				break;
@@ -37,13 +57,13 @@ class TournamentController<C extends Competitor> {
 				this.tournament.phase = TournamentPhase.POST_QUALIFICATION;
 				const winners = this.tournament.state.qualificationState.getWinners().map(w => w.competitor);
 				if(this.tournament.layout.hasGroupPhase)
-					this.tournament.groups = createGroups(winners, this.tournament.layout.groupSize);
+					this.tournament.startingMatchups = createGroups(winners, this.tournament.layout.groupSize);
 				else
 					this.tournament.startingMatchups = createGroups(winners, 2);
 				break;
 			case TournamentPhase.POST_QUALIFICATION:
 				if(this.tournament.layout.hasGroupPhase)
-					this.advanceToGroup(this.tournament.groups);
+					this.advanceToGroup(this.tournament.startingMatchups);
 				else
 					this.advanceToMain(collapseNestedArray(this.tournament.startingMatchups));
 				break;
@@ -56,6 +76,11 @@ class TournamentController<C extends Competitor> {
 			case TournamentPhase.FINISHED:
 				this.advanceToFinished(this.tournament.state.mainState.tree.match.getWinner().competitor);
 		}
+		this.save();
+	}
+
+	private save() {
+		this.adapter?.save();
 	}
 
 	private matchupsFromGroupResult(result: ScoreboardEntry<C>[][]) {
@@ -123,5 +148,9 @@ class TournamentController<C extends Competitor> {
 		return new MainTournamentState<C>(tree);
 	}
 }
+
+export {
+	TournamentSyncAdapter
+};
 
 export default TournamentController;
