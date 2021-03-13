@@ -263,25 +263,25 @@ class TournamentState<C extends Competitor> extends ChangeNotifier {
 	public get qualificationState() { return this.states[0]; }
 
 	public set qualificationState(value) {
-		this.updateState(value, 0, "qualification")
+		this.updateState(value, 0, "qualificationState")
 	}
 
 	public get groupState() { return this.states[1]; }
 
 	public set groupState(value) {
-		this.updateState(value, 1, "group");
+		this.updateState(value, 1, "groupState");
 	}
 
 	public get mainState() { return this.states[2]; }
 
 	public set mainState(value) {
-		this.updateState(value, 2, "main");
+		this.updateState(value, 2, "mainState");
 	}
 
 	public get finishedState() { return this.states[3]; }
 
 	public set finishedState(value) {
-		this.updateState(value, 3, "finished");
+		this.updateState(value, 3, "finishedState");
 	}
 
 	public get current() {
