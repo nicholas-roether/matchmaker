@@ -69,7 +69,7 @@ export enum TournamentPhase {
 }
 
 export interface TournamentInit<C extends Competitor> {
-	id: string;
+	id?: string;
 	owner: string;
 	name: string;
 	description?: string;
@@ -80,13 +80,12 @@ export interface TournamentInit<C extends Competitor> {
 	layout: TournamentLayout;
 	phase?: TournamentPhase;
 	state?: TournamentState<C>;
-	groups?: C[][],
 	startingMatchups?: C[][],
 	users?: TournamentUser[]
 }
 
 class TournamentModel<C extends Competitor> extends ChangeNotifier {
-	public readonly id: string;
+	public readonly id?: string;
 	public readonly name: string;
 	public readonly description?: string;
 	public readonly logo?: string;
@@ -94,11 +93,10 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 	public readonly qualificationTime?: Date;
 	public readonly competitors: C[];
 	public readonly layout: TournamentLayout;
+	public readonly state: TournamentState<C> = null;
 	private _owner: string;
-	private _groups?: C[][];
 	private _startingMatchups?: C[][];
 	private _phase: TournamentPhase;
-	private _state: TournamentState<C> = null;
 	private _users: TournamentUser[];
 
 	constructor({
@@ -110,8 +108,7 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 		competitors,
 		layout,
 		phase = TournamentPhase.FINISHED,
-		state,
-		groups = null,
+		state = new TournamentState<C>(),
 		startingMatchups = null,
 		users = []
 	}: TournamentInit<C>) {
@@ -122,19 +119,12 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 		this.logo = logo;
 		this.competitors = competitors;
 		this.layout = layout;
-		if(this.layout.hasGroupPhase)
-			this._groups = groups;
-		if(!this.layout.hasGroupPhase)
-			this._startingMatchups = startingMatchups;
+		this.state = state;
+		this._startingMatchups = startingMatchups;
 		this._owner = owner;
 		this._phase = phase;
-		this._state = state;
 		this._users = users;
 		this.pass(state);
-		this.addListener(evt => {
-			if(evt.property == "state") this.pass(this._state);
-		});
-		if(this.groups) this.checkCompetitorValidity(...collapseNestedArray(this.groups));
 		if(this.startingMatchups) this.checkCompetitorValidity(...collapseNestedArray(this.startingMatchups));
 	}
 
@@ -152,38 +142,9 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 		this.notify("phase");
 	}
 
-	public get state() { return this._state; }
-
-	public set state(newState) {
-		this._state = newState;
-		this.notify("state");
-	}
-
-	public get groups() { return this._groups; }
-
-	public set groups(value) {
-		if(!this.layout.hasGroupPhase)
-			throw new Error("This tournament doesn't have a group phase");
-		if(!this.canModifyStartingPositions())
-			throw new Error("Groups can't be modified during this tournament phase");
-		this.checkCompetitorValidity(...collapseNestedArray(value));
-		this._groups = value;
-		this.notify("groups");
-	}
-
-	public swapInGroups(competitor1: C, competitor2: C) {
-		if(!this.groups) throw new Error("This tournament has no groups defined");
-		const group1 = this.getGroupOf(competitor1);
-		const group2 = this.getGroupOf(competitor2);
-		if(!group1 || !group2) throw new Error("Could not find competitor");
-		swapBetween(competitor1, competitor2, group1, group2);
-	}
-
 	public get startingMatchups() { return this._startingMatchups; }
 
 	public set startingMatchups(value) {
-		if(this.layout.hasGroupPhase)
-			throw new Error("The matchups for this tournament are determined by the group phase and cannot be modified");
 		if(!this.canModifyStartingPositions())
 			throw new Error("Starting matchups can't be modified during this group phase");
 		this.checkCompetitorValidity(...collapseNestedArray(value));
@@ -214,10 +175,6 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 		return (this.phase == "planned" && !this.layout.hasQualificationPhase) || this.phase == "post-qualification";
 	}
 
-	private getGroupOf(competitor: C) {
-		if(!this.groups) return null;
-		return this.groups.find(group => group.includes(competitor));
-	}
 
 	private getStartingMatchupOf(competitor: C) {
 		if(!this.startingMatchups) return null;
@@ -232,4 +189,7 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 	}
 }
 
+export {
+	TournamentUser
+}
 export default TournamentModel;
