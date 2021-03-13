@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { CompetitorSchema, TournamentSchema, UserSchema } from "./schema";
 
-type MongooseModel = mongoose.Model<mongoose.Document<any>>;
+export type MongooseModel = mongoose.Model<mongoose.Document<any>>;
 
 interface Models {
 	User: MongooseModel
@@ -25,3 +25,5 @@ class Database {
 
 	public get connected() { return Boolean(this.connection); }
 }
+
+export default Database;
