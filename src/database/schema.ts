@@ -1,11 +1,7 @@
 import mongoose from "mongoose";
+import { CompetitorType } from "../tournament/competitor";
 import { TournamentPhase } from "../tournament/tournament_model";
 import { isPowerOf } from "../utils/math_utils";
-
-export enum UserType {
-	PLAYER = "player",
-	TEAM = "team"
-}
 
 const CompetitorSchema = new mongoose.Schema({
 	tournament: {
@@ -19,7 +15,7 @@ const CompetitorSchema = new mongoose.Schema({
 	},
 	type: {
 		type: String,
-		enum: Object.values(UserType),
+		enum: Object.values(CompetitorType),
 		required: true
 	},
 	members: [{
@@ -110,10 +106,7 @@ const GroupStateSchemaType = {
 }
 
 const MatchTreeNodeSchemaType = {
-	match: {
-		type: MatchSchemaType,
-		required: true
-	},
+	match: MatchSchemaType,
 	state: {
 		type: String,
 		enum: [
@@ -158,14 +151,18 @@ const TournamentSchema = new mongoose.Schema({
 	logo: String,
 	time: Date,
 	qualificationTime: Date,
-	competitors: [{
-		type: mongoose.Types.ObjectId,
+	competitors: {
+		type: [mongoose.Types.ObjectId],
 		ref: "competitor",
 		required: true
-	}],
+	},
 	layout: {
 		type: TournamentLayoutSchemaType,
 		required: true
+	},
+	startingMatchups: {
+		type: [[mongoose.Types.ObjectId]],
+		ref: "competitor"
 	},
 	phase: {
 		type: String,
@@ -195,7 +192,7 @@ const TournamentSchema = new mongoose.Schema({
 		default: []
 	},
 	state: {
-		type: TournamentGroupSchemaType,
+		type: TournamentStateSchemaType,
 		default: {}
 	}
 });
