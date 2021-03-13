@@ -26,12 +26,16 @@ class ChangeNotifier extends EventTarget {
 		notifiers.forEach(n => this.pass(n));
 	}
 
-	public addListener(listener: ChangeListener, passedNotifies = true) {
+	public addListener(listener: ChangeListener, passedNotifies = false) {
 		this.removeEventListener("change", listener);
 		this.removeEventListener("passedchange", listener);
 		this.addEventListener("change", listener);
 		if(passedNotifies) this.addEventListener("passedchange", listener);
 	}
+}
+
+export {
+	ChangeEvent
 }
 
 export default ChangeNotifier;
