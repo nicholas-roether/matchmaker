@@ -25,6 +25,8 @@ abstract class TournamentSyncAdapter<C extends Competitor> {
 	}
 
 	public abstract save(): void;
+
+	public abstract disconnect(): void;
 }
 
 export enum TournamentSyncType {
@@ -77,6 +79,10 @@ class TournamentController<C extends Competitor> {
 				this.advanceToFinished(this.tournament.state.mainState.tree.match.getWinner().competitor);
 		}
 		this.save();
+	}
+
+	public disconnect() {
+		this.adapter?.disconnect();
 	}
 
 	private save() {
