@@ -1,27 +1,23 @@
 import mongoose from "mongoose";
 import Database, { MongooseModel } from "../database/database";
-import { Competitor, Team } from "./competitor";
+import { createPairs } from "../utils/data_utils";
+import { Competitor, CompetitorType, Player, Team } from "./competitor";
 import { TournamentSyncAdapter } from "./tournament_controller";
+import TournamentLayout from "./tournament_layout";
 import TournamentModel from "./tournament_model";
-import { Match, MatchTreeNode, Scoreboard, ScoreboardEntry } from "./tournament_state";
+import { FinishedTournamentState, GroupTournamentState, MainTournamentState, Match, MatchTreeNode, QualificationTournamentState, Scoreboard, ScoreboardEntry, StartingMatchTreeNode, TournamentGroup, TournamentState } from "./tournament_state";
 
 class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>{
 	private readonly db: Database;
 	private readonly ready: Promise<any>;
 
-	// private readonly userDocuments: mongoose.Document[];
 	private competitorDocuments: mongoose.Document[];
 	private tournamentDocument: mongoose.Document;
 
-	constructor(tournament: TournamentModel<C>) {
+	constructor(tournament: TournamentModel<C>, db?: Database, tournamentDocument?: mongoose.Document, competitorDocuments?: mongoose.Document[]) {
 		super(tournament);
-		this.db = new Database();
-		// this.userDocuments = tournament.users.map(user => new this.db.models.User({
-		// 	_id: user.id,
-		// 	name: user.name,
-		// 	image: user.image
-		// }));
-		this.ready = this.getDocuments();
+		this.db = db || new Database();
+		this.ready = this.getDocuments(tournamentDocument, competitorDocuments);
 		this.init();
 	}
 
@@ -99,9 +95,13 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 		]);
 	}
 
-	private async getDocuments() {
-		this.competitorDocuments = await this.getCompetitorDocuments();
-		this.tournamentDocument = await this.getTournamentDocument();
+	public disconnect() {
+		this.db.disconnect();
+	}
+
+	private async getDocuments(tournamentDocument?: mongoose.Document, competitorDocuments?: mongoose.Document[]) {
+		this.competitorDocuments = competitorDocuments || await this.getCompetitorDocuments();
+		this.tournamentDocument = tournamentDocument || await this.getTournamentDocument();
 	}
 
 	private async getCompetitorDocuments() {
@@ -225,6 +225,114 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 				return c.players.every((player, i) => player.name === competitor.players[i].name)
 		})]._id;
 	}
-}
+
+	public static async getTournament<C extends Competitor>(id: string) {
+		const db = new Database();
+		const tournamentDoc = await db.models.Tournament.findById(mongoose.Types.ObjectId.createFromHexString(id)).exec();
+		if(!tournamentDoc) throw new Error(`Tournament '${id}' could not be found`);
+		const competitorDocuments = await Promise.all<mongoose.Document>(tournamentDoc.get("competitor").map(id => {
+			const competitor = db.models.Competitor.findById(mongoose.Types.ObjectId.createFromHexString(id));
+			if(!competitor) throw new Error(`Tournament contains invalid competitor ${id}`);
+			return competitor;
+		})).catch(e => { throw e; });
+		const tournament = new TournamentModel({
+			id,
+			owner: tournamentDoc.get("owner"),
+			name: tournamentDoc.get("name"),
+			description: tournamentDoc.get("descriptoion"),
+			logo: tournamentDoc.get("logo"),
+			time: tournamentDoc.get("time"),
+			qualificationTime: tournamentDoc.get("qualificationTime"),
+			competitors: competitorDocuments.map(competitorDoc => {
+				switch(competitorDoc.get("type")) {
+					case CompetitorType.PLAYER:
+						return new Player(competitorDoc.get("name"), competitorDoc.id);
+					case CompetitorType.TEAM:
+						return new Team(
+							competitorDoc.get("name"),
+							competitorDoc.get("members"),
+							competitorDoc.id
+						)
+				}
+			}),
+			layout: new TournamentLayout({
+				numCompetitors: tournamentDoc.get("layout").numCompetitors,
+				hasGroupPhase: tournamentDoc.get("layout").hasGroupPhase,
+				numGroups: tournamentDoc.get("layout").numGroups,
+				winnersPerGroup: tournamentDoc.get("layout").winnersPerGroup,
+				hasQualificationPhase: tournamentDoc.get("layout").hasQualificationPhase,
+				competitorsAfterQualification: tournamentDoc.get("layout").competitorsAfterQualification
+			}),
+			phase: tournamentDoc.get("phase"),
+			state: (() => {
+				const qualificationDoc = tournamentDoc.get("state").qualificationState;
+				const groupDoc = tournamentDoc.get("state").groupState;
+				const mainDoc = tournamentDoc.get("state").mainState;
+				const finishedState = tournamentDoc.get("state").finishedState;
+				return new TournamentState<C>([
+					qualificationDoc ? new QualificationTournamentState(
+						this.createScoreboard<C>(qualificationDoc.scoreboard),
+						qualificationDoc.currentMatches.map(m => this.createMatch<C>(m)),
+						qualificationDoc.competitorsAfterQualification
+					) : null,
+					groupDoc ? new GroupTournamentState(
+						groupDoc.groups.map(group => this.createTournamentGroup(group, tournamentDoc.get("layout").winnersPerGroup)),
+						tournamentDoc.get("layout").winnersPerGroup
+					) : null,
+					mainDoc ? new MainTournamentState(this.createMatchTree(mainDoc.nodes)) : null,
+					finishedState ? new FinishedTournamentState(finishedState.winner) : null
+				]);
+			})()
+		});
+	}
+
+	private static createMatchTree<C extends Competitor>(nodes: any[]) {
+		const numStartingNodes = Math.log2(nodes.length + 1) - 1;
+		let lastLayer: MatchTreeNode<C>[] = nodes.slice(0, numStartingNodes).map(node => {
+			return new StartingMatchTreeNode<C>(this.createMatch(node.match));
+		});
+		const createTree = (startingIndex: number) => {
+			if(lastLayer.length >= 1) return;
+			lastLayer = createPairs(lastLayer).map((pair, i) => new MatchTreeNode<C>(
+				pair,
+				nodes[startingIndex + i].state
+			));
+		};
+		createTree(numStartingNodes);
+		return lastLayer[0];
+	}
+
+	private static createMatch<C extends Competitor>(document: any): Match<C> {
+		return new Match(
+			this.createScoreboardEntry(document.entry1),
+			this.createScoreboardEntry(document.entry2)
+		)
+	}
+
+	private static createCompetitor<C extends Competitor>(document: any): C {
+		switch(document.get("type")) {
+			case CompetitorType.PLAYER:
+				return new Player(document.name, document.id) as C;
+			case CompetitorType.TEAM:
+				return new Team(document.name, document.members?.map(m => new Player(m)), document.id) as unknown as C;
+		}
+	}
+
+	private static createScoreboardEntry<C extends Competitor>(document: any): ScoreboardEntry<C> {
+		return new ScoreboardEntry(this.createCompetitor(document.competitor), document.wins, document.score);
+	}
+
+	private static createScoreboard<C extends Competitor>(document: any): Scoreboard<C> {
+		return new Scoreboard(document?.entries.map(e => this.createScoreboardEntry(e)) || []);
+	}
+	
+	private static createTournamentGroup<C extends Competitor>(document: any, numWinners: number): TournamentGroup<C> {
+		return new TournamentGroup(
+			this.createScoreboard(document.scoreboard),
+			numWinners,
+			document.currentMatches?.map(match => this.createMatch(match))
+		);
+	}
+} 
 
 export default TournamentDBAdapter;
