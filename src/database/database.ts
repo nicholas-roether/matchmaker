@@ -15,6 +15,7 @@ class Database {
 	public models: Models;
 
 	public async connect() {
+		if(this.connected) return;
 		this.connection = await mongoose.createConnection(Database.connectionString);
 		this.models = {
 			User: this.connection.model("user", UserSchema),
@@ -24,6 +25,11 @@ class Database {
 	}
 
 	public get connected() { return Boolean(this.connection); }
+
+	// TODO actually call this
+	public async disconnect() {
+		await this.connection.close();
+	}
 }
 
 export default Database;
