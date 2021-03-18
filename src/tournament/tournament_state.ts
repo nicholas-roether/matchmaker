@@ -163,8 +163,8 @@ class TournamentGroup<C extends Competitor> extends ChangeNotifier {
 }
 
 class QualificationTournamentState<C extends Competitor> extends TournamentGroup<C> {
-	constructor(scoreboard: Scoreboard<C>, competitorsAfterQualification: number) {
-		super(scoreboard, competitorsAfterQualification);
+	constructor(scoreboard: Scoreboard<C>, competitorsAfterQualification: number, matches?: Match<C>[]) {
+		super(scoreboard, competitorsAfterQualification, matches);
 		if(scoreboard.entries.length < competitorsAfterQualification) throw new InvalidTournamentStateError("More competitors must pass than exist");
 	}
 
