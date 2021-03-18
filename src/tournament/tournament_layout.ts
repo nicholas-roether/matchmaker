@@ -27,14 +27,14 @@ class TournamentLayout {
 	public readonly competitorsAfterQualification?: number;
 
 	constructor({
-		numCompetitors: competitors,
+		numCompetitors,
 		hasGroupPhase,
 		numGroups,
 		winnersPerGroup,
 		hasQualificationPhase,
 		competitorsAfterQualification
 	}: TournamentLayoutInit) {
-		this.numCompetitors = competitors;
+		this.numCompetitors = numCompetitors;
 		this.hasGroupPhase = hasGroupPhase;
 		this.numGroups = numGroups;
 		this.winnersPerGroup = winnersPerGroup;
