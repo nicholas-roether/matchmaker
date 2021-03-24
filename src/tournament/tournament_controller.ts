@@ -3,6 +3,7 @@ import { collapseNestedArray, createGroups, createPairs, groupByIndex } from "..
 import { isPowerOf } from "../utils/math_utils";
 import { Competitor } from "./competitor";
 import TournamentDBAdapter from "./tournament_db_adapter";
+import TournamentLayout from "./tournament_layout";
 import TournamentModel, { TournamentPhase } from "./tournament_model";
 import {
 	FinishedTournamentState,
@@ -33,6 +34,18 @@ export enum TournamentSyncType {
 	DATABASE,
 	REST,
 	NONE
+}
+
+export interface TournamentCreationArgs<C extends Competitor> {
+	owner: string;
+	name: string;
+	description?: string;
+	logo?: string;
+	time?: Date;
+	qualificationTime?: Date;
+	competitors: C[];
+	layout: TournamentLayout;
+	startingMatchups?: C[][];
 }
 
 class TournamentController<C extends Competitor> {
@@ -122,6 +135,14 @@ class TournamentController<C extends Competitor> {
 		this.tournament.phase = TournamentPhase.FINISHED;
 		this.tournament.state.finishedState = new FinishedTournamentState(winner);
 	}
+
+	public static async createTournament<C extends Competitor>(init: TournamentCreationArgs<C>): Promise<[TournamentModel<C>, TournamentController<C>]> {
+		if(window != null) return;
+		const model = new TournamentModel(init);
+		const controller = new TournamentController(model, TournamentSyncType.DATABASE);
+		await controller.save();
+		return [model, controller];
+	} 
 
 	private static createScoreboard<C extends Competitor>(competitors: C[]) {
 		return new Scoreboard<C>(competitors.map(c => new ScoreboardEntry<C>(c, 0)));
