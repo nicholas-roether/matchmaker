@@ -8,6 +8,10 @@ export default (req, res) => NextAuth(req, res, {
 		useNewUrlParser: true
 	},
 	providers: [
+		Providers.Email({
+			server: process.env.EMAIL_HOST,
+			from: process.env.EMAIL_FROM
+		}),
 		Providers.Google({
 			clientId: process.env.GOOGLE_CLIENT_ID,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
