@@ -213,7 +213,6 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 			throw new Error(`${Model.name} document with id ${id.toHexString()} not found`);
 		}
 		doc = new Model(data);
-		await doc.save();
 		return doc;
 	}
 
