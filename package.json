@@ -14,7 +14,7 @@
   "dependencies": {
     "@material-ui/core": "^4.11.3",
     "@material-ui/icons": "^4.11.2",
-    "mongoose": "^5.11.19",
+    "mongoose": "^5.12.1",
     "next": "10.0.7",
     "next-auth": "^3.6.0",
     "react": "17.0.1",
