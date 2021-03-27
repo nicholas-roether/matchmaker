@@ -5,7 +5,8 @@ export default (req, res) => NextAuth(req, res, {
 	database: {
 		type: "mongodb",
 		url: process.env.DATABASE_URL,
-		useNewUrlParser: true
+		useNewUrlParser: true,
+		useUnifiedTopology: true,
 	},
 	providers: [
 		Providers.Email({
