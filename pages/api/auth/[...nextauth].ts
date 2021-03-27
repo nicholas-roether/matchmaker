@@ -9,7 +9,14 @@ export default (req, res) => NextAuth(req, res, {
 	},
 	providers: [
 		Providers.Email({
-			server: process.env.EMAIL_HOST,
+			server: {
+				host: process.env.EMAIL_HOST,
+				port: process.env.EMAIL_PORT,
+				auth: {
+					user: process.env.EMAIL_LOGIN,
+					pass: process.env.EMAIL_PASSWORD
+				}
+			},
 			from: process.env.EMAIL_FROM
 		}),
 		Providers.Google({

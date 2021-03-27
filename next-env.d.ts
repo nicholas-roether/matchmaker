@@ -6,6 +6,9 @@ declare global {
 		interface ProcessEnv {
 			NEXTAUTH_URL: string;
 			EMAIL_HOST: string;
+			EMAIL_PORT: number;
+			EMAIL_LOGIN: string;
+			EMAIL_PASSWORD: string;
 			EMAIL_FROM: string;
 			DATABASE_URL: string;
 			GOOGLE_CLIENT_ID: string;
