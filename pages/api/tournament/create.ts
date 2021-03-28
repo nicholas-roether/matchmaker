@@ -1,9 +1,10 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getSession } from "next-auth/client";
+import Database from "../../../src/database/database";
 import { Player, Team } from "../../../src/tournament/competitor";
 import TournamentController from "../../../src/tournament/tournament_controller";
 import TournamentLayout from "../../../src/tournament/tournament_layout";
-import { ApiResponse, requireMethod } from "../../../src/utils/api_utils";
+import { ApiResponse, getValidJson, requireMethod } from "../../../src/utils/api_utils";
 
 interface TournamentCreateOptions {
 	name: string;
@@ -47,38 +48,47 @@ function verifyTournamentCreateOptions(obj: any): obj is TournamentCreateOptions
 
 export default async function(req: NextApiRequest, res: NextApiResponse) {
 	if(!requireMethod("POST", req, res)) return;
-	if(!verifyTournamentCreateOptions(req.body)) return res.status(400).end(ApiResponse.error("Invalid Request"));
+
+	const data = getValidJson(req.body, res);
+	if(!data) return;
+	if(!verifyTournamentCreateOptions(data)) return res.status(400).end(ApiResponse.error("Invalid Request").json());
+
 	const session = await getSession({ req }) as any;
-	if(!session) res.status(401).end(ApiResponse.error("You need to be logged in to create a tournament"));
+	if(!session) return res.status(401).end(ApiResponse.error("You need to be logged in to create a tournament").json());
 	const id = session.user.id;
+
+	const db = new Database();
+	await db.connect();
+
 	try {
 		let competitors: Player[] | Team[];
-		if(req.body.competitorType == "single") 
-			competitors = req.body.competitors.map(e => new Player(e));
+		if(data.competitorType == "single") 
+			competitors = data.competitors.map(e => new Player(e));
 		else
-			competitors = req.body.competitors.map(e => new Team(e.name, e.members.map(m => new Player(m))));
+			competitors = data.competitors.map(e => new Team(e.name, e.members.map(m => new Player(m))));
 
 		const [tournament, controller] = await TournamentController.createTournament({
 			owner: id,
-			name: req.body.name,
-			description: req.body.description,
-			logo: req.body.logo,
-			time: new Date(req.body.time),
-			qualificationTime: new Date(req.body.qualificationTime),
+			name: data.name,
+			description: data.description,
+			logo: data.logo,
+			time: new Date(data.time),
+			qualificationTime: new Date(data.qualificationTime),
 			competitors,
 			layout: new TournamentLayout({
-				numCompetitors: req.body.competitors.length,
-				hasGroupPhase: req.body.layout.hasGroupPhase ?? false,
-				numGroups: req.body.layout.numGroups,
-				winnersPerGroup: req.body.layout.winnersPerGroup,
-				hasQualificationPhase: req.body.layout.hasQualificationPhase ?? false,
-				competitorsAfterQualification: req.body.layout.competitorsAfterQualification
+				numCompetitors: data.competitors.length,
+				hasGroupPhase: data.layout.hasGroupPhase ?? false,
+				numGroups: data.layout.numGroups,
+				winnersPerGroup: data.layout.winnersPerGroup,
+				hasQualificationPhase: data.layout.hasQualificationPhase ?? false,
+				competitorsAfterQualification: data.layout.competitorsAfterQualification
 			}),
-			startingMatchups: req.body.startingMatchups.map(matchup => matchup.map(name => competitors.find(c => c.name == name)))
-		});
+			startingMatchups: data.startingMatchups?.map(matchup => matchup.map(name => competitors.find(c => c.name == name)))
+		}, db);
+		controller.disconnect();
 
-		res.status(200).end(ApiResponse.data(tournament.id));
+		res.status(200).end(ApiResponse.data(tournament.id).json());
 	} catch(e) {
-		return res.status(500).end(e.toString());
+		return res.status(500).end(ApiResponse.error(e.toString()).json());
 	}
 }
