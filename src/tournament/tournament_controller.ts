@@ -1,4 +1,4 @@
-import { group } from "console";
+import Database from "../database/database";
 import { collapseNestedArray, createGroups, createPairs, groupByIndex } from "../utils/data_utils";
 import { isPowerOf } from "../utils/math_utils";
 import { Competitor } from "./competitor";
@@ -17,18 +17,7 @@ import {
 	StartingMatchTreeNode,
 	TournamentGroup
 } from "./tournament_state";
-
-abstract class TournamentSyncAdapter<C extends Competitor> {
-	public readonly tournament: TournamentModel<C>;
-
-	constructor(tournament: TournamentModel<C>) {
-		this.tournament = tournament;
-	}
-
-	public abstract save(): void;
-
-	public abstract disconnect(): void;
-}
+import TournamentSyncAdapter from "./tournament_sync_adapter";
 
 export enum TournamentSyncType {
 	DATABASE,
@@ -52,10 +41,10 @@ class TournamentController<C extends Competitor> {
 	public readonly tournament: TournamentModel<C>;
 	private readonly adapter?: TournamentSyncAdapter<C>;
 
-	constructor(tournament: TournamentModel<C>, syncType: TournamentSyncType) {
+	constructor(tournament: TournamentModel<C>, syncType: TournamentSyncType, db?: Database) {
 		this.tournament = tournament;
 		if(syncType == TournamentSyncType.DATABASE)
-			this.adapter = new TournamentDBAdapter(tournament);
+			this.adapter = new TournamentDBAdapter(tournament, db);
 	}
 
 	public advancePhase() {
@@ -136,10 +125,9 @@ class TournamentController<C extends Competitor> {
 		this.tournament.state.finishedState = new FinishedTournamentState(winner);
 	}
 
-	public static async createTournament<C extends Competitor>(init: TournamentCreationArgs<C>): Promise<[TournamentModel<C>, TournamentController<C>]> {
-		if(window != null) return;
+	public static async createTournament<C extends Competitor>(init: TournamentCreationArgs<C>, db?: Database): Promise<[TournamentModel<C>, TournamentController<C>]> {
 		const model = new TournamentModel(init);
-		const controller = new TournamentController(model, TournamentSyncType.DATABASE);
+		const controller = new TournamentController(model, TournamentSyncType.DATABASE, db);
 		await controller.save();
 		return [model, controller];
 	} 
