@@ -49,15 +49,14 @@ class TournamentLayout {
 		if(this.hasGroupPhase) {
 			if(!isPowerOf(this.numGroups, 2)) return false;
 			if(!isPowerOf(this.winnersPerGroup, 2)) return false;
-		} else if(!isPowerOf(this.numCompetitors, 2)) {
+			const beforeGroups = this.hasQualificationPhase 
+				? this.competitorsAfterQualification
+				: this.numCompetitors;
+			if(!divides(this.numGroups, beforeGroups)) return false;
+			if(beforeGroups / this.numGroups >= this.winnersPerGroup) return false;
+		} else if(!isPowerOf(this.hasQualificationPhase ? this.competitorsAfterQualification : this.numCompetitors, 2)) {
 			return false;
 		}
-
-		const beforeGroups = this.hasQualificationPhase 
-			? this.competitorsAfterQualification
-			: this.numCompetitors;
-		if(!divides(this.numGroups, beforeGroups)) return false;
-		if(beforeGroups / this.numGroups >= this.winnersPerGroup) return false;
 		return true;
 	}
 
