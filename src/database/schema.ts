@@ -4,11 +4,6 @@ import { TournamentPhase } from "../tournament/tournament_model";
 import { isPowerOf } from "../utils/math_utils";
 
 const CompetitorSchema = new mongoose.Schema({
-	tournament: {
-		type: mongoose.Types.ObjectId,
-		ref: "tournament",
-		required: true
-	},
 	name: {
 		type: String,
 		required: true
