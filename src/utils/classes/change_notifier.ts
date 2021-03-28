@@ -1,41 +1,34 @@
-class ChangeEvent extends Event {
-	public readonly property: string;
+export type ChangeListener = (property: string, direct: boolean) => any;
 
-	constructor(property: string, direct = true) {
-		super(direct ? "change" : "passedchange");
-		this.property = property;
-	}
-}
+class ChangeNotifier {
+	private listenerList: {callback: ChangeListener, passed: boolean}[] = [];
 
-export type ChangeListener = (event: ChangeEvent) => any;
-
-class ChangeNotifier extends EventTarget {
 	protected notify(...properties: string[]) {
-		for(let property of properties) this.dispatchEvent(new ChangeEvent(property));
+		for(let property of properties) {
+			for(let {callback} of this.listenerList) callback?.(property, true);
+		}
 	}
 
 	private passedNotify(property: string) {
-		this.dispatchEvent(new ChangeEvent(property, false));
+		for(let {callback, passed} of this.listenerList) if(passed) callback(property, false);
 	}
 
 	protected pass(notifier: ChangeNotifier) {
-		notifier.addListener(evt => this.passedNotify(evt.property));
+		notifier.addListener((property) => this.passedNotify(property));
 	}
 
 	protected passAll(notifiers: ChangeNotifier[]) {
 		notifiers.forEach(n => this.pass(n));
 	}
 
-	public addListener(listener: ChangeListener, passedNotifies = false) {
-		this.removeEventListener("change", e => listener(e as ChangeEvent));
-		this.removeEventListener("passedchange", e => listener(e as ChangeEvent));
-		this.addEventListener("change", e => listener(e as ChangeEvent));
-		if(passedNotifies) this.addEventListener("passedchange", e => listener(e as ChangeEvent));
-	}
-}
+	public removeListener(listener: ChangeListener) {
+		const index = this.listenerList.findIndex(({callback}) => callback === listener);
+		if(index !== -1) this.listenerList.splice(index, 1);
+	} 
 
-export {
-	ChangeEvent
+	public addListener(listener: ChangeListener, passedNotifies = false) {
+		this.listenerList.push({callback: listener, passed: passedNotifies});
+	}
 }
 
 export default ChangeNotifier;
