@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import Database, { MongooseModel } from "../database/database";
 import { createPairs } from "../utils/data_utils";
 import { Competitor, CompetitorType, Player, Team } from "./competitor";
-import { TournamentSyncAdapter } from "./tournament_controller";
+import TournamentSyncAdapter from "./tournament_sync_adapter";
 import TournamentLayout from "./tournament_layout";
 import TournamentModel from "./tournament_model";
 import { FinishedTournamentState, GroupTournamentState, MainTournamentState, Match, MatchTreeNode, QualificationTournamentState, Scoreboard, ScoreboardEntry, StartingMatchTreeNode, TournamentGroup, TournamentState } from "./tournament_state";
@@ -17,14 +17,15 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 	constructor(tournament: TournamentModel<C>, db?: Database, tournamentDocument?: mongoose.Document, competitorDocuments?: mongoose.Document[]) {
 		super(tournament);
 		this.db = db || new Database();
-		this.ready = this.getDocuments(tournamentDocument, competitorDocuments);
+		const getDocuments = () => this.getDocuments(tournamentDocument, competitorDocuments);
+		this.ready = this.db.connected ? getDocuments() : this.db.connect().then(() => getDocuments());
 		this.init();
 	}
 
 	private async init() {
 		await this.ready;
-		this.tournament.addListener(e => {
-			switch(e.property) {
+		this.tournament.addListener(property => {
+			switch(property) {
 				case "owner":
 					this.tournamentDocument.set("owner", mongoose.Types.ObjectId.createFromHexString(this.tournament.owner));
 					break;
@@ -42,8 +43,8 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 					})));
 			}
 		});
-		this.tournament.state.addListener(e => {
-			switch(e.property) {
+		this.tournament.state.addListener(property => {
+			switch(property) {
 				case "qualificationState":
 					if(!this.tournament.state.qualificationState) break;
 					this.tournamentDocument.get("state").set("qualificationState", {
@@ -74,9 +75,9 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 						winner: this.getCompetitorId(this.tournament.state.finishedState.winner)
 					})
 			};
-			this.tournament.competitors.forEach((competitor, i) => competitor.addListener(e => {
+			this.tournament.competitors.forEach((competitor, i) => competitor.addListener(property => {
 				const doc = this.competitorDocuments[i];
-				switch(e.property) {
+				switch(property) {
 					case "name":
 						doc.set("name", competitor.name);
 						break;
@@ -88,7 +89,8 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 		})
 	}
 
-	public save() {
+	public async save() {
+		await this.ready;
 		Promise.all([
 			this.tournamentDocument.save(),
 			...this.competitorDocuments.map(c => c.save())
@@ -110,12 +112,17 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 
 	private async getCompetitorDocument(competitor: C) {	
 		let data: any = {type: competitor.type, name: competitor.name};
+		let id = (await this.db.models.Competitor.findOne({
+			type: competitor.type,
+			name: competitor.name,
+			members: (competitor as any).members ?? []
+		}).select("_id").exec()).id ?? competitor.id;
 		if(competitor instanceof Team)
 			data.members = competitor.players;
 		return await this.getDocument(
 			this.db.models.Competitor,
 			data,
-			competitor.id ? mongoose.Types.ObjectId.createFromHexString(competitor.id) : null
+			id ? mongoose.Types.ObjectId.createFromHexString(id) : null
 		);
 	}
 
@@ -168,7 +175,7 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 				}
 			},
 			this.tournament.id ? mongoose.Types.ObjectId.createFromHexString(this.tournament.id) : null
-		)
+		).catch(e => {throw e})
 	}
 
 	private treeToNodeDocumentArray(tree: MatchTreeNode<C>) {
