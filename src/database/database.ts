@@ -16,7 +16,7 @@ class Database {
 
 	public async connect() {
 		if(this.connected) return;
-		this.connection = await mongoose.createConnection(Database.connectionString);
+		this.connection = await mongoose.createConnection(Database.connectionString, {useNewUrlParser: true});
 		this.models = {
 			User: this.connection.model("user", UserSchema),
 			Competitor: this.connection.model("competitor", CompetitorSchema),
