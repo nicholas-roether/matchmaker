@@ -17,7 +17,7 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 	constructor(tournament: TournamentModel<C>, db?: Database, tournamentDocument?: mongoose.Document, competitorDocuments?: mongoose.Document[]) {
 		super(tournament);
 		this.db = db || new Database();
-		const getDocuments = () => this.getDocuments(tournamentDocument, competitorDocuments);
+		const getDocuments = () => this.getDocuments(tournamentDocument, competitorDocuments).catch(e => {throw e});
 		this.ready = this.db.connected ? getDocuments() : this.db.connect().then(() => getDocuments());
 		this.init();
 	}
@@ -102,12 +102,12 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 	}
 
 	private async getDocuments(tournamentDocument?: mongoose.Document, competitorDocuments?: mongoose.Document[]) {
-		this.competitorDocuments = competitorDocuments || await this.getCompetitorDocuments();
-		this.tournamentDocument = tournamentDocument || await this.getTournamentDocument();
+		this.competitorDocuments = competitorDocuments || await this.getCompetitorDocuments().catch(e => {throw e});
+		this.tournamentDocument = tournamentDocument || await this.getTournamentDocument().catch(e => {throw e});
 	}
 
 	private async getCompetitorDocuments() {
-		return await Promise.all(this.tournament.competitors.map(c => this.getCompetitorDocument(c)));
+		return await Promise.all(this.tournament.competitors.map(c => this.getCompetitorDocument(c))).catch(e => {throw e});
 	}
 
 	private async getCompetitorDocument(competitor: C) {	
@@ -123,7 +123,7 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 			this.db.models.Competitor,
 			data,
 			id ? mongoose.Types.ObjectId.createFromHexString(id) : null
-		);
+		).catch(e => {throw e});
 	}
 
 	private async getTournamentDocument() {

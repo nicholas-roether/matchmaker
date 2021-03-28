@@ -128,7 +128,7 @@ class TournamentController<C extends Competitor> {
 	public static async createTournament<C extends Competitor>(init: TournamentCreationArgs<C>, db?: Database): Promise<[TournamentModel<C>, TournamentController<C>]> {
 		const model = new TournamentModel(init);
 		const controller = new TournamentController(model, TournamentSyncType.DATABASE, db);
-		await controller.save();
+		controller.save();
 		return [model, controller];
 	} 
 

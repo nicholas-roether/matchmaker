@@ -7,7 +7,7 @@ async function handleDatabase<T>(callback: (db: Database) => T | Promise<T>, db?
 		db = new Database();
 		mustDisconnectDb = true;
 	}
-	await db.connect();
+	await db.connect().catch(e => {throw e});
 	const result = callback(db);
 	if(mustDisconnectDb) db.disconnect();
 	return result;
@@ -22,7 +22,10 @@ async function hasOwnerPrivilege(tournamentId: string, userId: string, db?: Data
 	return await handleDatabase(async db => {
 		const ownerId = (await db.models.Tournament.findById(tournamentId).select("owner").exec()).get("owner") as mongoose.Types.ObjectId;
 		return ownerId.equals(userId);
-	}, db);
+	}, db).catch(e => {
+		console.log(`Failed to get privileges: ${e.toString()}`);
+		return false;
+	});
 }
 
 async function hasModeratorPrivilege(tournamentId: string, userId: string, db?: Database) {
@@ -30,7 +33,10 @@ async function hasModeratorPrivilege(tournamentId: string, userId: string, db?: 
 		const user = await getUser(tournamentId, userId, db);
 		if(!user) return false;
 		return user.isModerator;
-	}, db);
+	}, db).catch(e => {
+		console.log(`Failed to get privileges: ${e.toString()}`);
+		return false;
+	});
 }
 
 async function hasStreamerPrivilege(tournamentId: string, userId: string, db?: Database) {
@@ -38,7 +44,10 @@ async function hasStreamerPrivilege(tournamentId: string, userId: string, db?: D
 		const user = await getUser(tournamentId, userId, db);
 		if(!user) return false;
 		return user.isStreamer;
-	}, db);
+	}, db).catch(e => {
+		console.log(`Failed to get privileges: ${e.toString()}`);
+		return false;
+	});
 }
 
 export {

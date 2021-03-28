@@ -57,8 +57,14 @@ export default async function(req: NextApiRequest, res: NextApiResponse) {
 	if(!session) return res.status(401).end(ApiResponse.error("You need to be logged in to create a tournament").json());
 	const id = session.user.id;
 
+	let success = true;
+
 	const db = new Database();
-	await db.connect();
+	await db.connect().catch(e => {
+		success = false;
+		res.status(500).end(ApiResponse.error(`Database connection failed: ${e.toString()}`).json());
+	});
+	if(!success) return;
 
 	try {
 		let competitors: Player[] | Team[];
@@ -84,8 +90,14 @@ export default async function(req: NextApiRequest, res: NextApiResponse) {
 				competitorsAfterQualification: data.layout.competitorsAfterQualification
 			}),
 			startingMatchups: data.startingMatchups?.map(matchup => matchup.map(name => competitors.find(c => c.name == name)))
-		}, db);
+		}, db).catch(e => {
+			success = false;
+			res.status(500).end(ApiResponse.error(`Tournament creation failed: ${e.toString()}`));
+			return [null, null];
+		});
 		controller.disconnect();
+
+		if(!success) return;
 
 		res.status(200).end(ApiResponse.data(tournament.id).json());
 	} catch(e) {

@@ -16,7 +16,10 @@ class Database {
 
 	public async connect() {
 		if(this.connected) return;
-		this.connection = await mongoose.createConnection(Database.connectionString, {useNewUrlParser: true});
+		this.connection = await mongoose.createConnection(Database.connectionString, {useNewUrlParser: true}).catch(e => {
+			console.log(`Database connection failed: ${e.toString()}`);
+			throw e;
+		});
 		this.models = {
 			User: this.connection.model("user", UserSchema),
 			Competitor: this.connection.model("competitor", CompetitorSchema),
@@ -28,7 +31,9 @@ class Database {
 
 	// TODO actually call this
 	public async disconnect() {
-		await this.connection.close();
+		await this.connection.close().catch(e => {
+			console.log(`Failed to close connection ${this.connection.id}: ${e.toString()}`);
+		});
 	}
 }
 
