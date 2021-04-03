@@ -3,37 +3,51 @@ import { getSession } from "next-auth/client";
 import Database from "../../../src/database/database";
 import { Player, Team } from "../../../src/tournament/competitor";
 import TournamentController from "../../../src/tournament/tournament_controller";
-import TournamentLayout from "../../../src/tournament/tournament_layout";
+import TournamentLayout, { GroupWinnerDetermination } from "../../../src/tournament/tournament_layout";
+import { TournamentMeta, TournamentOptions } from "../../../src/tournament/tournament_model";
 import { ApiResponse, ArgumentSchema, extractData, requireMethod, validateBySchema } from "../../../src/utils/api_utils";
 
 interface TournamentCreateOptions {
-	name: string;
+	meta: {
+		name: string;
+		description?: string;
+		logo?: string;
+	},
+	options: {
+		liveTracking?: boolean
+	}
 	competitorType: "team" | "single"
-	description?: string;
-	logo?: string;
 	time?: number;
-	qualificationTime?: number;
 	competitors: string[] | {name: string, members: string[]}[];
 	startingMatchups?: string[][];
 	layout: {
 		hasGroupPhase?: boolean;
 		numGroups?: number;
 		winnersPerGroup?: number;
+		groupWinnerDetermination?: GroupWinnerDetermination;
 		hasQualificationPhase?: boolean;
 		competitorsAfterQualification?: number
 	}
 }
 
 const schema: ArgumentSchema = {
-	name: {type: "string"},
+	meta: {
+		type: {
+			name: {type: "string"},
+			description: {type: "string", optional: true},
+			logo: {type: "string", optional: true}
+		}
+	},
+	options: {
+		type: {
+			liveTracking: {type: "string", optional: true}
+		}
+	},
 	competitorType: {
 		type: "string",
 		oneOf: ["team", "single"],
 	},
-	description: {type: "string", optional: true},
-	logo: {type: "string", optional: true},
 	time: {type: "number", optional: true},
-	qualificationTime: {type: "number", optional: true},
 	competitors: {
 		type: "any",
 		validate: (competitors) => {
@@ -61,6 +75,11 @@ const schema: ArgumentSchema = {
 			hasGroupPhase: {type: "boolean", optional: true},
 			numGroups: {type: "number", optional: true},
 			winnersPerGroup: {type: "number", optional: true},
+			groupWinnerDetermination: {
+				type: "string",
+				optional: true,
+				oneOf: Object.values(GroupWinnerDetermination)
+			},
 			hasQualificationPhase: {type: "boolean", optional: true},
 			competitorsAfterQualification: {type: "number", optional: true},
 		},
@@ -102,11 +121,9 @@ export default async function(req: NextApiRequest, res: NextApiResponse) {
 
 		const [tournament, controller] = await TournamentController.createTournament({
 			owner: id,
-			name: data.name,
-			description: data.description,
-			logo: data.logo,
+			meta: new TournamentMeta(data.meta),
+			options: new TournamentOptions(data.options),
 			time: new Date(data.time),
-			qualificationTime: new Date(data.qualificationTime),
 			competitors,
 			layout: new TournamentLayout({
 				numCompetitors: data.competitors.length,

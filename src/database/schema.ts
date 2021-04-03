@@ -74,13 +74,25 @@ const ScoreboardEntrySchemaType = {
 
 const ScoreboardSchemaType = [ScoreboardEntrySchemaType];
 
+const ScoredCompetitorSchemaType = {
+	competitor: {
+		type: mongoose.Types.ObjectId,
+		ref: "competitor",
+		required: true
+	},
+	score: {
+		type: Number,
+		default: 0
+	}
+}
+
 const MatchSchemaType = {
 	entry1: {
-		type: ScoreboardEntrySchemaType,
+		type: ScoredCompetitorSchemaType,
 		required: true
 	},
 	entry2: {
-		type: ScoreboardEntrySchemaType,
+		type: ScoredCompetitorSchemaType,
 		required: true
 	}
 }
@@ -132,20 +144,34 @@ const TournamentStateSchemaType = {
 	}
 }
 
+const TournamentMetaSchemaType = {
+	name: {
+		type: String,
+		default: "Unnamed Tournament"
+	},
+	description: {
+		type: String,
+		default: ""
+	},
+	logo: String
+}
+
+const TournamentOptionsSchemaType = {
+	liveTracking: {
+		type: Boolean,
+		default: false
+	}
+}
+
 const TournamentSchema = new mongoose.Schema({
 	owner: {
 		type: mongoose.Types.ObjectId,
 		ref: "user",
 		required: true
 	},
-	name: {
-		type: String,
-		required: true
-	},
-	description: String,
-	logo: String,
+	meta: TournamentMetaSchemaType,
+	options: TournamentOptionsSchemaType,
 	time: Date,
-	qualificationTime: Date,
 	competitors: {
 		type: [mongoose.Types.ObjectId],
 		ref: "competitor",

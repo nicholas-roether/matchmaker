@@ -59,6 +59,66 @@ class TournamentUser extends ChangeNotifier {
 	}
 }
 
+interface TournamentOptionsInit {
+	liveTracking?: boolean;
+}
+
+class TournamentOptions extends ChangeNotifier {
+	private _liveTracking: boolean;
+
+	constructor({liveTracking = false}: TournamentOptionsInit) {
+		super();
+		this._liveTracking = liveTracking;
+	}
+
+	public get liveTracking() { return this._liveTracking; }
+
+	public set liveTracking(value) {
+		this._liveTracking = value;
+		this.notify("liveTracking");
+	}
+}
+
+interface TournamentMetaInit {
+	name: string;
+	description?: string;
+	logo?: string;
+}
+
+class TournamentMeta extends ChangeNotifier {
+	private _name: string;
+	private _description: string;
+	private _logo: string;
+
+	constructor({name, description = "", logo}: TournamentMetaInit) {
+		super();
+		this._name = name;
+		this._description = description;
+		this._logo = logo;
+	}
+
+	public get name() { return this._name; }
+
+	public set name(value) {
+		this._name = value;
+		this.notify("name");
+	}
+
+	public get description() { return this._description; }
+
+	public set description(value) {
+		this._description = value;
+		this.notify("description");
+	}
+
+	public get logo() { return this._logo; }
+
+	public set logo(value) {
+		this._logo = value;
+		this.notify("logo");
+	}
+}
+
 export enum TournamentPhase {
 	PLANNED = "planned",
 	QUALIFICATION = "qualification",
@@ -71,11 +131,9 @@ export enum TournamentPhase {
 export interface TournamentInit<C extends Competitor> {
 	id?: string;
 	owner: string;
-	name: string;
-	description?: string;
-	logo?: string;
+	meta: TournamentMeta;
+	options: TournamentOptions;
 	time?: Date;
-	qualificationTime?: Date;
 	competitors: C[];
 	layout: TournamentLayout;
 	phase?: TournamentPhase;
@@ -86,14 +144,12 @@ export interface TournamentInit<C extends Competitor> {
 
 class TournamentModel<C extends Competitor> extends ChangeNotifier {
 	public readonly id?: string;
-	public readonly name: string;
-	public readonly description?: string;
-	public readonly logo?: string;
-	public readonly time?: Date;
-	public readonly qualificationTime?: Date;
+	public readonly meta: TournamentMeta;
+	public readonly options: TournamentOptions;
 	public readonly competitors: C[];
 	public readonly layout: TournamentLayout;
 	public readonly state: TournamentState<C> = null;
+	private _time: Date;
 	private _owner: string;
 	private _startingMatchups?: C[][];
 	private _phase: TournamentPhase;
@@ -102,28 +158,30 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 	constructor({
 		id,
 		owner,
-		name,
-		description,
-		logo,
+		meta,
+		options,
+		time,
 		competitors,
 		layout,
 		phase = TournamentPhase.FINISHED,
 		state = new TournamentState<C>(),
 		startingMatchups = null,
-		users = []
+		users = [],
 	}: TournamentInit<C>) {
 		super();
 		this.id = id;
-		this.name = name;
-		this.description = description;
-		this.logo = logo;
+		this.meta = meta;
+		this.options = options;
 		this.competitors = competitors;
 		this.layout = layout;
 		this.state = state;
+		this._time = time;
 		this._startingMatchups = startingMatchups;
 		this._owner = owner;
 		this._phase = phase;
 		this._users = users;
+		this.pass(meta);
+		this.pass(options);
 		this.pass(state);
 		if(this.startingMatchups) this.checkCompetitorValidity(...collapseNestedArray(this.startingMatchups));
 	}
@@ -140,6 +198,13 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 	public set phase(newPhase) {
 		this._phase = newPhase;
 		this.notify("phase");
+	}
+
+	public get time() { return this._time; }
+
+	public set time(value) {
+		this._time = value;
+		this.notify("time");
 	}
 
 	public get startingMatchups() { return this._startingMatchups; }
@@ -190,6 +255,8 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 }
 
 export {
-	TournamentUser
+	TournamentUser,
+	TournamentOptions,
+	TournamentMeta
 }
 export default TournamentModel;

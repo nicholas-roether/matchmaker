@@ -4,7 +4,7 @@ import { isPowerOf } from "../utils/math_utils";
 import { Competitor } from "./competitor";
 import TournamentDBAdapter from "./tournament_db_adapter";
 import TournamentLayout from "./tournament_layout";
-import TournamentModel, { TournamentPhase } from "./tournament_model";
+import TournamentModel, { TournamentMeta, TournamentOptions, TournamentPhase } from "./tournament_model";
 import {
 	FinishedTournamentState,
 	GroupTournamentState,
@@ -14,6 +14,7 @@ import {
 	QualificationTournamentState,
 	Scoreboard,
 	ScoreboardEntry,
+	ScoredCompetitor,
 	StartingMatchTreeNode,
 	TournamentGroup
 } from "./tournament_state";
@@ -27,11 +28,9 @@ export enum TournamentSyncType {
 
 export interface TournamentCreationArgs<C extends Competitor> {
 	owner: string;
-	name: string;
-	description?: string;
-	logo?: string;
+	meta: TournamentMeta;
+	options: TournamentOptions;
 	time?: Date;
-	qualificationTime?: Date;
 	competitors: C[];
 	layout: TournamentLayout;
 	startingMatchups?: C[][];
@@ -137,7 +136,7 @@ class TournamentController<C extends Competitor> {
 	}
 
 	private static createMatch<C extends Competitor>(competitors: [C, C]) {
-		return new Match<C>(new ScoreboardEntry<C>(competitors[0], 0), new ScoreboardEntry<C>(competitors[1], 0));
+		return new Match<C>(new ScoredCompetitor<C>(competitors[0], 0), new ScoredCompetitor<C>(competitors[1], 0));
 	}
 
 	private static createMatchTree<C extends Competitor>(competitors: C[]): MatchTreeNode<C> {

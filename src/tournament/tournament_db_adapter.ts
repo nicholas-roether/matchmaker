@@ -4,8 +4,8 @@ import { createPairs } from "../utils/data_utils";
 import { Competitor, CompetitorType, Player, Team } from "./competitor";
 import TournamentSyncAdapter from "./tournament_sync_adapter";
 import TournamentLayout from "./tournament_layout";
-import TournamentModel from "./tournament_model";
-import { FinishedTournamentState, GroupTournamentState, MainTournamentState, Match, MatchTreeNode, QualificationTournamentState, Scoreboard, ScoreboardEntry, StartingMatchTreeNode, TournamentGroup, TournamentState } from "./tournament_state";
+import TournamentModel, { TournamentMeta, TournamentOptions } from "./tournament_model";
+import { FinishedTournamentState, GroupTournamentState, MainTournamentState, Match, MatchTreeNode, QualificationTournamentState, Scoreboard, ScoreboardEntry, ScoredCompetitor, StartingMatchTreeNode, TournamentGroup, TournamentState } from "./tournament_state";
 
 class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>{
 	private readonly db: Database;
@@ -131,20 +131,11 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 			this.db.models.Tournament,
 			{
 				owner: mongoose.Types.ObjectId.createFromHexString(this.tournament.owner),
-				name: this.tournament.name,
-				description: this.tournament.description,
-				logo: this.tournament.logo,
+				meta: this.tournament.meta,
+				options: this.tournament.options,
 				time: this.tournament.time,
-				qualificationTime: this.tournament.qualificationTime,
 				competitors: this.competitorDocuments.map(doc => doc._id),
-				layout: {
-					numCompetitors: this.tournament.layout.numCompetitors,
-					hasGroupPhase: this.tournament.layout.hasGroupPhase,
-					numGroups: this.tournament.layout.numGroups,
-					winnersPerGroup: this.tournament.layout.winnersPerGroup,
-					hasQualificationPhase: this.tournament.layout.hasQualificationPhase,
-					competitorsAfterQualification: this.tournament.layout.competitorsAfterQualification
-				},
+				layout: this.tournament.layout,
 				startingMatchups: this.tournament.startingMatchups?.map(m => m.map(c => this.getCompetitorId(c))),
 				phase: this.tournament.phase,
 				users: this.tournament.users.map(user => ({
@@ -205,10 +196,17 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 		return scoreboard.entries.map(entry => this.scoreboardEntryToDocument(entry));
 	}
 
+	private scoredCompetitorToDocument(scoredCompetitor: ScoredCompetitor<C>) {
+		return {
+			competitor: this.getCompetitorId(scoredCompetitor.competitor),
+			score: scoredCompetitor.score
+		}
+	}
+
 	private matchToDocument(match: Match<C>) {
 		return {
-			entry1: this.scoreboardEntryToDocument(match.entry1),
-			entry2: this.scoreboardEntryToDocument(match.entry2)
+			entry1: this.scoredCompetitorToDocument(match.entry1),
+			entry2: this.scoredCompetitorToDocument(match.entry2)
 		}
 	}
 
@@ -244,11 +242,9 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 		const tournament = new TournamentModel({
 			id,
 			owner: tournamentDoc.get("owner"),
-			name: tournamentDoc.get("name"),
-			description: tournamentDoc.get("descriptoion"),
-			logo: tournamentDoc.get("logo"),
+			meta: new TournamentMeta(tournamentDoc.get("meta")),
+			options: new TournamentOptions(tournamentDoc.get("options")),
 			time: tournamentDoc.get("time"),
-			qualificationTime: tournamentDoc.get("qualificationTime"),
 			competitors: competitorDocuments.map(competitorDoc => {
 				switch(competitorDoc.get("type")) {
 					case CompetitorType.PLAYER:
@@ -308,10 +304,14 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 		return lastLayer[0];
 	}
 
+	private static createScoredCompetitor<C extends Competitor>(document: any): ScoredCompetitor<C> {
+		return new ScoredCompetitor(this.createCompetitor(document.competitor), document.score);
+	}
+
 	private static createMatch<C extends Competitor>(document: any): Match<C> {
 		return new Match(
-			this.createScoreboardEntry(document.entry1),
-			this.createScoreboardEntry(document.entry2)
+			this.createScoredCompetitor(document.entry1),
+			this.createScoredCompetitor(document.entry2)
 		)
 	}
 

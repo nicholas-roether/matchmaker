@@ -98,27 +98,48 @@ class Scoreboard<C extends Competitor> extends ChangeNotifier {
 	}
 }
 
-class Match<C extends Competitor> extends Scoreboard<C> {
-	constructor(entry1: ScoreboardEntry<C>, entry2: ScoreboardEntry<C>) {
-		super([entry1, entry2]);
+class ScoredCompetitor<C extends Competitor> extends ChangeNotifier {
+	public readonly competitor: C;
+	private _score: number;
+
+	constructor(competitor: C, score: number) {
+		super();
+		this.competitor = competitor;
+		this._score = score;
 	}
 
-	public getWinner(): ScoreboardEntry<C> {
-		return this.getTop(1)[0];
+	public get score() { return this._score; }
+
+	public set score(value) {
+		this._score = value;
+		this.notify("score");
+	}
+}
+
+class Match<C extends Competitor> extends ChangeNotifier {
+	public readonly entry1: ScoredCompetitor<C>;
+	public readonly entry2: ScoredCompetitor<C>;
+
+	constructor(entry1: ScoredCompetitor<C>, entry2: ScoredCompetitor<C>) {
+		super();
+		this.entry1 = entry1;
+		this.entry2 = entry2;
+		this.passAll([entry1, entry2]);
 	}
 
-	public getLoser(): ScoreboardEntry<C> {
-		return this.getTop(2)[1];
+	public getWinner(): ScoredCompetitor<C> {
+		return this.entry1.score > this.entry2.score ? this.entry1 : this.entry2;
 	}
 
-	public get entry1() { return this.entries[0] }
+	public getLoser(): ScoredCompetitor<C> {
+		return this.entry1.score < this.entry2.score ? this.entry1 : this.entry2;
+	}
 
-	public get entry2() { return this.entries[1] }
 
-	public get competitors(): [C, C] { return this.entries.map(e => e.competitor) as [C, C]; }
+	public get competitors(): [C, C] { return [this.entry1.competitor, this.entry2.competitor] }
 
 	public static create<C extends Competitor>(competitor1: C, competitor2: C, initialScore?: number): Match<C> {
-		return new Match(new ScoreboardEntry(competitor1, initialScore), new ScoreboardEntry(competitor2, initialScore));
+		return new Match(new ScoredCompetitor(competitor1, initialScore), new ScoredCompetitor(competitor2, initialScore));
 	}
 }
 
@@ -243,7 +264,6 @@ class FinishedTournamentState<C extends Competitor> {
 	}
 }
 
-// export type TournamentState<C extends Competitor> = QualificationTournamentState<C> | GroupTournamentState<C> | MainTournamentState<C> | null;
 
 type _TournamentStateTuple<C extends Competitor> = [
 	QualificationTournamentState<C>,
@@ -301,6 +321,7 @@ export {
 	InvalidTournamentStateError,
 	ScoreboardEntry,
 	Scoreboard,
+	ScoredCompetitor,
 	Match,
 	QualificationTournamentState,
 	TournamentGroup,

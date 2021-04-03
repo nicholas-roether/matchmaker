@@ -5,8 +5,14 @@ export interface TournamentLayoutInit {
 	hasGroupPhase: boolean;
 	numGroups?: number;
 	winnersPerGroup?: number;
+	groupWinnerDetermination?: GroupWinnerDetermination,
 	hasQualificationPhase: boolean;
 	competitorsAfterQualification?: number;
+}
+
+export enum GroupWinnerDetermination {
+	SCORE = "score",
+	DIFFERENCE = "difference"
 }
 
 class InvalidTournamentError extends Error {
@@ -23,6 +29,7 @@ class TournamentLayout {
 	public readonly hasGroupPhase: boolean;
 	public readonly numGroups?: number;
 	public readonly winnersPerGroup?: number;
+	public readonly groupWinnerDetermination?: GroupWinnerDetermination;
 	public readonly hasQualificationPhase: boolean;
 	public readonly competitorsAfterQualification?: number;
 
@@ -31,13 +38,15 @@ class TournamentLayout {
 		hasGroupPhase,
 		numGroups,
 		winnersPerGroup,
+		groupWinnerDetermination = GroupWinnerDetermination.SCORE,
 		hasQualificationPhase,
-		competitorsAfterQualification
+		competitorsAfterQualification,
 	}: TournamentLayoutInit) {
 		this.numCompetitors = numCompetitors;
 		this.hasGroupPhase = hasGroupPhase;
 		this.numGroups = numGroups;
 		this.winnersPerGroup = winnersPerGroup;
+		this.groupWinnerDetermination = groupWinnerDetermination;
 		this.hasQualificationPhase = hasQualificationPhase;
 		this.competitorsAfterQualification = competitorsAfterQualification;
 
