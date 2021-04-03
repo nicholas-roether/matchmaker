@@ -61,9 +61,10 @@ export interface ArgumentSchemaTypeOptions {
 export type ArgumentSchema = {[key: string]: ArgumentSchemaTypeOptions};
 
 function validateType(value: any, type: ArgumentSchemaType, oneOf?: string[]) {
-	if(typeof type == "object") return validateBySchema(value, type);
-	if(type === "any" || typeof value !== type) return false;
+	if(typeof type === "object") return validateBySchema(value, type);
+	if(type !== "any" && typeof value !== type) return false;
 	if(oneOf && type === "string" && !oneOf.includes(value)) return false;
+	return true;
 }
 
 function validateBySchema<T>(value: any, schema: ArgumentSchema): value is T {
@@ -86,7 +87,7 @@ function extractData<T>(body: string, schema: ArgumentSchema, res: NextApiRespon
 	const data = getValidJson(body, res);
 	if(!data) return null;
 	if(!validateBySchema<T>(data, schema)) {
-		res.status(400).end(ApiResponse.error("Invalid or missing argument"));
+		res.status(400).end(ApiResponse.error("Invalid or missing argument").json());
 		return null;
 	}
 	return data;
