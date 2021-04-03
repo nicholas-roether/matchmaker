@@ -37,7 +37,7 @@ function requireMethod(method: string, req: NextApiRequest, res: NextApiResponse
 	return valid;
 }
 
-function getValidJson(body: string, res: NextApiResponse): string {
+function getValidJson(body: string, res: NextApiResponse) {
 	try {
 		return JSON.parse(body);
 	} catch(e) {
@@ -46,8 +46,57 @@ function getValidJson(body: string, res: NextApiResponse): string {
 	}
 }
 
+type Type = "string" | "number" |  "boolean" | "any";
+
+export type ArgumentSchemaType = Type | ArgumentSchema
+
+export interface ArgumentSchemaTypeOptions {
+	type: ArgumentSchemaType,
+	array?: boolean,
+	optional?: boolean,
+	oneOf?: string[],
+	validate?: (value: any) => boolean
+};
+
+export type ArgumentSchema = {[key: string]: ArgumentSchemaTypeOptions};
+
+function validateType(value: any, type: ArgumentSchemaType, oneOf?: string[]) {
+	if(typeof type == "object") return validateBySchema(value, type);
+	if(type === "any" || typeof value !== type) return false;
+	if(oneOf && type === "string" && !oneOf.includes(value)) return false;
+}
+
+function validateBySchema<T>(value: any, schema: ArgumentSchema): value is T {
+	for(const key in schema) {
+		const {type, array = false, optional = false, oneOf, validate = () => true} = schema[key];
+		if(!(key in value)) {
+			if(!optional) return false;
+		} else {
+			const val = value[key];
+			if(array) {
+				if(!Array.isArray(val) || !val.every(e => validateType(e, type, oneOf))) return false;
+			} else if(!validateType(val, type, oneOf)) return false;
+			if(!validate(val)) return false;
+		}
+	}
+	return true;
+}
+
+function extractData<T>(body: string, schema: ArgumentSchema, res: NextApiResponse): T {
+	const data = getValidJson(body, res);
+	if(!data) return null;
+	if(!validateBySchema<T>(data, schema)) {
+		res.status(400).end(ApiResponse.error("Invalid or missing argument"));
+		return null;
+	}
+	return data;
+}
+
 export {
 	ApiResponse,
 	requireMethod,
-	getValidJson
+	getValidJson,
+	validateType,
+	validateBySchema,
+	extractData
 }
