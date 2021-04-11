@@ -10,6 +10,8 @@ abstract class TournamentSyncAdapter<C extends Competitor> {
 
 	public abstract save(): void;
 
+	public abstract delete(): void;
+
 	public abstract disconnect(): void;
 }
 
