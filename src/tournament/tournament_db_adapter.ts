@@ -234,7 +234,7 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 		})]._id;
 	}
 
-	public static async getTournament<C extends Competitor>(id: string, db?: Database): Promise<[TournamentController<C>, TournamentModel<C>]> {
+	public static async getTournament<C extends Competitor>(id: string, db?: Database): Promise<[TournamentModel<C>, TournamentController<C>]> {
 		if(!db) db = new Database();
 		const tournamentDoc = await db.models.Tournament.findById(mongoose.Types.ObjectId.createFromHexString(id)).exec();
 		if(!tournamentDoc) throw new Error(`Tournament '${id}' could not be found`);
@@ -291,7 +291,7 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 			})()
 		});
 		const controller = new TournamentController(tournament, TournamentSyncType.DATABASE, db);
-		return [controller, tournament];
+		return [tournament, controller];
 	}
 
 	private static createMatchTree<C extends Competitor>(nodes: any[]) {
