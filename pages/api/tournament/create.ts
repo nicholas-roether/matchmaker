@@ -5,7 +5,7 @@ import { Player, Team } from "../../../src/tournament/competitor";
 import TournamentController from "../../../src/tournament/tournament_controller";
 import TournamentLayout, { GroupWinnerDetermination } from "../../../src/tournament/tournament_layout";
 import { TournamentMeta, TournamentOptions } from "../../../src/tournament/tournament_model";
-import { ApiResponse, ArgumentSchema, extractData, requireMethod, validateBySchema } from "../../../src/utils/api_utils";
+import { ApiResponse, ArgumentSchema, extractData, requireLogin, requireMethod, validateBySchema } from "../../../src/utils/api_utils";
 
 interface TournamentCreateOptions {
 	meta: {
@@ -99,9 +99,8 @@ export default async function(req: NextApiRequest, res: NextApiResponse) {
 	const data = extractData<TournamentCreateOptions>(req.body, schema, res);
 	if(!data) return;
 
-	const session = await getSession({ req }) as any;
-	if(!session) return res.status(401).end(ApiResponse.error("You need to be logged in to create a tournament").json());
-	const id = session.user.id;
+	const session = await requireLogin(req, res, "You need to be logged in to create a tournament");
+	if(!session) return;
 
 	let success = true;
 
@@ -120,7 +119,7 @@ export default async function(req: NextApiRequest, res: NextApiResponse) {
 			competitors = data.competitors.map(e => new Team(e.name, e.members.map(m => new Player(m))));
 
 		const [tournament, controller] = await TournamentController.createTournament({
-			owner: id,
+			owner: session.user.id,
 			meta: new TournamentMeta(data.meta),
 			options: new TournamentOptions(data.options),
 			time: new Date(data.time),
