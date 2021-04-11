@@ -86,8 +86,8 @@ function validateBySchema<T>(value: any, schema: ArgumentSchema): value is T {
 	return true;
 }
 
-function extractData<T>(body: string, schema: ArgumentSchema, res: NextApiResponse): T {
-	const data = getValidJson(body, res);
+function extractData<T>(body: string | {[key: string]: any}, schema: ArgumentSchema, res: NextApiResponse): T {
+	const data = typeof body === "string" ? getValidJson(body, res) : body;
 	if(!data) return null;
 	if(!validateBySchema<T>(data, schema)) {
 		res.status(400).end(ApiResponse.error("Invalid or missing argument").json());
