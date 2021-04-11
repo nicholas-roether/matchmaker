@@ -82,6 +82,10 @@ class TournamentController<C extends Competitor> {
 		this.save();
 	}
 
+	public delete() {
+		this.adapter.delete();
+	}
+
 	public disconnect() {
 		this.adapter?.disconnect();
 	}
