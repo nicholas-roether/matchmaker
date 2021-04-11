@@ -1,4 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { getSession } from "next-auth/client";
+import Database from "../database/database";
+import { hasModeratorPrivilege, hasOwnerPrivilege, hasStreamerPrivilege } from "../tournament/tournament_permissions";
 
 class ApiResponse {
 	public readonly data?: any;
@@ -93,11 +96,84 @@ function extractData<T>(body: string, schema: ArgumentSchema, res: NextApiRespon
 	return data;
 }
 
+async function requireLogin(req: NextApiRequest, res: NextApiResponse, customMessage?: string) {
+	const session = await getSession({ req }) as any;
+	if(!session) {
+		res.status(401).end(ApiResponse.error(customMessage ?? "You need to be logged in to perform this action").json());
+		return null;
+	}
+	return session;
+}
+
+async function requirePrivilege(
+	req: NextApiRequest,
+	res: NextApiResponse,
+	validator: (session: any) => Promise<boolean>,
+	message: string,
+) {
+	const session = await requireLogin(req, res, message);
+	if(!session) return;
+	if(!(await validator(session))) {
+		res.status(401).end(ApiResponse.error(message));
+		return null;
+	}
+	return session;
+}
+
+async function requireStreamerPrivilege(
+	tournamentId: string,
+	req: NextApiRequest,
+	res: NextApiResponse,
+	customMessage?: string,
+	db?: Database
+) {
+	return requirePrivilege(
+		req,
+		res,
+		session => hasStreamerPrivilege(tournamentId, session.user.id, db),
+		customMessage ?? "You need to be a streamer to perform this action"
+	)
+}
+
+async function requireModeratorPrivilege(
+	tournamentId: string,
+	req: NextApiRequest,
+	res: NextApiResponse,
+	customMessage?: string,
+	db?: Database
+) {
+	return requirePrivilege(
+		req,
+		res,
+		session => hasModeratorPrivilege(tournamentId, session.user.id, db),
+		customMessage ?? "You need to be a moderator to perform this action"
+	)
+}
+
+async function requireOwnerPrivilege(
+	tournamentId: string,
+	req: NextApiRequest,
+	res: NextApiResponse,
+	customMessage?: string,
+	db?: Database
+) {
+	return requirePrivilege(
+		req,
+		res,
+		session => hasOwnerPrivilege(tournamentId, session.user.id, db),
+		customMessage ?? "You need to be the owner of this tournament to perform this action"
+	)
+}
+
 export {
 	ApiResponse,
 	requireMethod,
 	getValidJson,
 	validateType,
 	validateBySchema,
-	extractData
+	extractData,
+	requireLogin,
+	requireStreamerPrivilege,
+	requireModeratorPrivilege,
+	requireOwnerPrivilege
 }
