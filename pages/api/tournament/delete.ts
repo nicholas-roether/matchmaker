@@ -2,7 +2,7 @@ import * as mongoose from "mongoose";
 import { NextApiRequest, NextApiResponse } from "next";
 import Database from "../../../src/database/database";
 import TournamentDBAdapter from "../../../src/tournament/tournament_db_adapter";
-import { ArgumentSchema, extractData, requireMethod, requireOwnerPrivilege } from "../../../src/utils/api_utils";
+import { ApiResponse, ArgumentSchema, extractData, requireMethod, requireOwnerPrivilege } from "../../../src/utils/api_utils";
 
 interface TournamentDeleteOptions {
 	id: string;
@@ -25,8 +25,12 @@ export default async function(req: NextApiRequest, res: NextApiResponse) {
 	const session = requireOwnerPrivilege(data.id, req, res, "Only the owner can delete a tournament", db);
 	if(!session) return;
 
-	const [controller, _] = await TournamentDBAdapter.getTournament(data.id, db);
-	controller.delete();
+	try {
+		const [_, controller] = await TournamentDBAdapter.getTournament(data.id, db);
+		controller.delete();
+	} catch(e) {
+		return res.status(400).end(ApiResponse.error(`Failed to delete tournament: ${e}`).json());
+	}
 
 	db.disconnect();
 	return res.status(200).end("{}");
