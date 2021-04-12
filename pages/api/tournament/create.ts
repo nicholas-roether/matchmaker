@@ -122,7 +122,7 @@ export default async function(req: NextApiRequest, res: NextApiResponse) {
 			owner: session.user.id,
 			meta: new TournamentMeta(data.meta),
 			options: new TournamentOptions(data.options),
-			time: new Date(data.time),
+			time: data.time ? new Date(data.time) : null,
 			competitors,
 			layout: new TournamentLayout({
 				numCompetitors: data.competitors.length,
@@ -135,7 +135,7 @@ export default async function(req: NextApiRequest, res: NextApiResponse) {
 			startingMatchups: data.startingMatchups?.map(matchup => matchup.map(name => competitors.find(c => c.name == name)))
 		}, db).catch(e => {
 			success = false;
-			res.status(500).end(ApiResponse.error(`Tournament creation failed: ${e.toString()}`));
+			res.status(500).end(ApiResponse.error(`Tournament creation failed: ${e.toString()}`).json());
 			return [null, null];
 		});
 		controller.disconnect();
