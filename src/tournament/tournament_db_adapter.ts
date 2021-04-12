@@ -7,6 +7,7 @@ import TournamentLayout from "./tournament_layout";
 import TournamentModel, { TournamentMeta, TournamentOptions } from "./tournament_model";
 import { FinishedTournamentState, GroupTournamentState, MainTournamentState, Match, MatchTreeNode, QualificationTournamentState, Scoreboard, ScoreboardEntry, ScoredCompetitor, StartingMatchTreeNode, TournamentGroup, TournamentState } from "./tournament_state";
 import TournamentController, { TournamentSyncType } from "./tournament_controller";
+import { decodeObjectId, encodeObjectId } from "../utils/db_utils";
 
 class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>{
 	private readonly db: Database;
@@ -28,7 +29,7 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 		this.tournament.addListener(property => {
 			switch(property) {
 				case "owner":
-					this.tournamentDocument.set("owner", mongoose.Types.ObjectId.createFromHexString(this.tournament.owner));
+					this.tournamentDocument.set("owner", decodeObjectId(this.tournament.owner));
 					break;
 				case "phase":
 					this.tournamentDocument.set("phase", this.tournament.phase);
@@ -37,7 +38,7 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 					break;
 				case "users":
 					this.tournamentDocument.set("users", this.tournament.users.map(user => ({
-						user: mongoose.Types.ObjectId.createFromHexString(user.id),
+						user: decodeObjectId(user.id),
 						isStreamer: user.isStreamer,
 						isModerator: user.isModerator,
 						hidden: user.hidden
@@ -96,6 +97,8 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 			this.tournamentDocument.save(),
 			...this.competitorDocuments.map(c => c.save())
 		]);
+		this.tournament.id = encodeObjectId(this.tournamentDocument.id);
+		this.tournament.competitors.map(c => c.id = encodeObjectId(this.competitorDocuments.find(d => d.get("name") === c.name).id));
 	}
 
 	public async delete() {
@@ -126,7 +129,7 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 		return await this.getDocument(
 			this.db.models.Competitor,
 			data,
-			competitor.id ? mongoose.Types.ObjectId.createFromHexString(competitor.id) : null
+			competitor.id ? decodeObjectId(competitor.id) : null
 		).catch(e => {throw e});
 	}
 
@@ -134,7 +137,7 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 		return await this.getDocument(
 			this.db.models.Tournament,
 			{
-				owner: mongoose.Types.ObjectId.createFromHexString(this.tournament.owner),
+				owner: decodeObjectId(this.tournament.owner),
 				meta: this.tournament.meta,
 				options: this.tournament.options,
 				time: this.tournament.time,
@@ -143,7 +146,7 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 				startingMatchups: this.tournament.startingMatchups?.map(m => m.map(c => this.getCompetitorId(c))),
 				phase: this.tournament.phase,
 				users: this.tournament.users.map(user => ({
-					user: mongoose.Types.ObjectId.createFromHexString(user.id),
+					user: decodeObjectId(user.id),
 					isStreamer: user.isStreamer,
 					isModerator: user.isModerator,
 					hidden: user.hidden
@@ -169,7 +172,7 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 					} : null
 				}
 			},
-			this.tournament.id ? mongoose.Types.ObjectId.createFromHexString(this.tournament.id) : null
+			this.tournament.id ? decodeObjectId(this.tournament.id) : null
 		).catch(e => {throw e})
 	}
 
@@ -236,11 +239,11 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 
 	public static async getTournament<C extends Competitor>(id: string, db?: Database): Promise<[TournamentModel<C>, TournamentController<C>]> {
 		if(!db) db = new Database();
-		const tournamentDoc = await db.models.Tournament.findById(mongoose.Types.ObjectId.createFromHexString(id)).exec();
+		const tournamentDoc = await db.models.Tournament.findById(decodeObjectId(id)).exec();
 		if(!tournamentDoc) throw new Error(`Tournament '${id}' could not be found`);
-		const competitorDocuments = await Promise.all<mongoose.Document>(tournamentDoc.get("competitor").map(id => {
-			const competitor = db.models.Competitor.findById(mongoose.Types.ObjectId.createFromHexString(id));
-			if(!competitor) throw new Error(`Tournament contains invalid competitor ${id}`);
+		const competitorDocuments = await Promise.all<mongoose.Document>(tournamentDoc.get("competitor").map(competitorId => {
+			const competitor = db.models.Competitor.findById(decodeObjectId(competitorId));
+			if(!competitor) throw new Error(`Tournament contains invalid competitor ${competitorId}`);
 			return competitor;
 		})).catch(e => { throw e; });
 		const tournament = new TournamentModel<C>({
