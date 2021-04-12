@@ -15,7 +15,13 @@ function decodeObjectId(id: string): mongoose.Types.ObjectId {
 	return mongoose.Types.ObjectId.createFromHexString(hexString);
 }
 
+function isValidEncodedObjectId(id: string): boolean {
+	if(!id) return false;
+	return mongoose.Types.ObjectId.isValid(decodeObjectId(id));
+}
+
 export {
 	encodeObjectId,
-	decodeObjectId
+	decodeObjectId,
+	isValidEncodedObjectId
 }
