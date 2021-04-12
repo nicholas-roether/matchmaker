@@ -5,6 +5,7 @@ import { Competitor } from "../../../../src/tournament/competitor";
 import TournamentDBAdapter from "../../../../src/tournament/tournament_db_adapter";
 import TournamentModel from "../../../../src/tournament/tournament_model";
 import { ApiResponse, ArgumentSchema, extractData, requireMethod } from "../../../../src/utils/api_utils";
+import { isValidEncodedObjectId } from "../../../../src/utils/db_utils";
 
 interface TournamentGetOptions {
 	id: string;
@@ -13,7 +14,7 @@ interface TournamentGetOptions {
 const schema: ArgumentSchema = {
 	id: {
 		type: "string",
-		validate: (id) => mongoose.Types.ObjectId.isValid(id)
+		validate: (id) => isValidEncodedObjectId(id)
 	}
 }
 
@@ -24,15 +25,16 @@ export default async function(req: NextApiRequest, res: NextApiResponse) {
 	if(!data) return;
 	
 	const db = new Database();
-	let ret: TournamentModel<Competitor>;
+	await db.connect();
+
+	let tournament: TournamentModel<Competitor>;
 	try {
-		const [tournament, _] = await TournamentDBAdapter.getTournament(data.id, db);
-		ret = tournament; 
+		tournament = await TournamentDBAdapter.getTournament(data.id, db);
 	} catch(e) {
-		return res.status(404).end(ApiResponse.error(`Failed to get tournament: ${e}`));
+		return res.status(404).end(ApiResponse.error(`Failed to get tournament: ${e}`).json());
 	}
 
 	db.disconnect();
-	if(!ret) return res.status(500).end(ApiResponse.error("An unknown error occured").json());
-	return res.status(200).end(ApiResponse.data(ret).json());
+	if(!tournament) return res.status(500).end(ApiResponse.error("An unknown error occured").json());
+	return res.status(200).end(ApiResponse.data(tournament.toRaw()).json());
 }
