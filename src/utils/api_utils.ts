@@ -104,6 +104,7 @@ async function requireLogin(req: NextApiRequest, res: NextApiResponse, customMes
 	// 	return null;
 	// }
 	// return session;
+	// TODO change this back!!!
 }
 
 async function requirePrivilege(
