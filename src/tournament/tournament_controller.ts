@@ -82,16 +82,16 @@ class TournamentController<C extends Competitor> {
 		this.save();
 	}
 
-	public delete() {
-		this.adapter.delete();
+	public async delete() {
+		await this.adapter.delete();
 	}
 
 	public disconnect() {
 		this.adapter?.disconnect();
 	}
 
-	private save() {
-		this.adapter?.save();
+	private async save() {
+		await this.adapter?.save();
 	}
 
 	private matchupsFromGroupResult(result: ScoreboardEntry<C>[][]) {
@@ -131,7 +131,7 @@ class TournamentController<C extends Competitor> {
 	public static async createTournament<C extends Competitor>(init: TournamentCreationArgs<C>, db?: Database): Promise<[TournamentModel<C>, TournamentController<C>]> {
 		const model = new TournamentModel(init);
 		const controller = new TournamentController(model, TournamentSyncType.DATABASE, db);
-		controller.save();
+		await controller.save();
 		return [model, controller];
 	} 
 
