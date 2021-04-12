@@ -1,11 +1,13 @@
 import NextAuth from "next-auth";
 import Providers from "next-auth/providers";
+import { encodeObjectId } from "../../../src/utils/db_utils";
 
 export default (req, res) => NextAuth(req, res, {
 	database: {
 		type: "mongodb",
 		url: process.env.DATABASE_URL,
-		useNewUrlParser: true
+		useNewUrlParser: true,
+		useUnifiedTopology: true
 	},
 	providers: [
 		Providers.Email({
@@ -25,7 +27,7 @@ export default (req, res) => NextAuth(req, res, {
 	callbacks: {
 		async jwt(token, _, account) {
 			if(account) {
-				token.id = account.id;
+				token.id = encodeObjectId(account.id);
 				token.accessToken = account.accessToken
 			}
 			return token;
