@@ -167,6 +167,11 @@ async function requireOwnerPrivilege(
 	)
 }
 
+function defaultApiHeaders(res: NextApiResponse) {
+	res.setHeader("Content-Type", "application/json");
+	// add more here if need be
+}
+
 export {
 	ApiResponse,
 	requireMethod,
@@ -177,5 +182,6 @@ export {
 	requireLogin,
 	requireStreamerPrivilege,
 	requireModeratorPrivilege,
-	requireOwnerPrivilege
+	requireOwnerPrivilege,
+	defaultApiHeaders
 }

@@ -4,7 +4,7 @@ import Database from "../../../../src/database/database";
 import { Competitor } from "../../../../src/tournament/competitor";
 import TournamentDBAdapter from "../../../../src/tournament/tournament_db_adapter";
 import TournamentModel from "../../../../src/tournament/tournament_model";
-import { ApiResponse, ArgumentSchema, extractData, requireMethod } from "../../../../src/utils/api_utils";
+import { ApiResponse, ArgumentSchema, defaultApiHeaders, extractData, requireMethod } from "../../../../src/utils/api_utils";
 import { isValidEncodedObjectId } from "../../../../src/utils/db_utils";
 
 interface TournamentGetOptions {
@@ -19,6 +19,8 @@ const schema: ArgumentSchema = {
 }
 
 export default async function(req: NextApiRequest, res: NextApiResponse) {
+	defaultApiHeaders(res);
+
 	if(!requireMethod("GET", req, res)) return;
 	
 	const data = extractData<TournamentGetOptions>(req.query, schema, res);

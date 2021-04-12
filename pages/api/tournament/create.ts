@@ -5,7 +5,7 @@ import { Player, Team } from "../../../src/tournament/competitor";
 import TournamentController from "../../../src/tournament/tournament_controller";
 import TournamentLayout, { GroupWinnerDetermination } from "../../../src/tournament/tournament_layout";
 import { TournamentMeta, TournamentOptions } from "../../../src/tournament/tournament_model";
-import { ApiResponse, ArgumentSchema, extractData, requireLogin, requireMethod, validateBySchema } from "../../../src/utils/api_utils";
+import { ApiResponse, ArgumentSchema, defaultApiHeaders, extractData, requireLogin, requireMethod, validateBySchema } from "../../../src/utils/api_utils";
 
 interface TournamentCreateOptions {
 	meta: {
@@ -94,6 +94,8 @@ const schema: ArgumentSchema = {
 }
 
 export default async function(req: NextApiRequest, res: NextApiResponse) {
+	defaultApiHeaders(res);
+
 	if(!requireMethod("POST", req, res)) return;
 
 	const data = extractData<TournamentCreateOptions>(req.body, schema, res);
