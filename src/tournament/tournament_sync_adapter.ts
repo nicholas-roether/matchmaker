@@ -8,9 +8,9 @@ abstract class TournamentSyncAdapter<C extends Competitor> {
 		this.tournament = tournament;
 	}
 
-	public abstract save(): void;
+	public abstract save(): Promise<void>;
 
-	public abstract delete(): void;
+	public abstract delete(): Promise<void>;
 
 	public abstract disconnect(): void;
 }
