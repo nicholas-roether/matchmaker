@@ -138,8 +138,14 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 			this.db.models.Tournament,
 			{
 				owner: decodeObjectId(this.tournament.owner),
-				meta: this.tournament.meta,
-				options: this.tournament.options,
+				meta: {
+					name: this.tournament.meta.name,
+					description: this.tournament.meta.description,
+					logo: this.tournament.meta.logo
+				},
+				options: {
+					liveTracking: this.tournament.options.liveTracking
+				},
 				time: this.tournament.time,
 				competitors: this.competitorDocuments.map(doc => doc._id),
 				layout: this.tournament.layout,
@@ -237,30 +243,33 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 		})]._id;
 	}
 
-	public static async getTournament<C extends Competitor>(id: string, db?: Database): Promise<[TournamentModel<C>, TournamentController<C>]> {
-		if(!db) db = new Database();
+	public static async getTournament<C extends Competitor>(id: string, db?: Database): Promise<TournamentModel<C>> {
+		if(!db) {
+			db = new Database();
+			await db.connect();
+		}
 		const tournamentDoc = await db.models.Tournament.findById(decodeObjectId(id)).exec();
 		if(!tournamentDoc) throw new Error(`Tournament '${id}' could not be found`);
-		const competitorDocuments = await Promise.all<mongoose.Document>(tournamentDoc.get("competitor").map(competitorId => {
-			const competitor = db.models.Competitor.findById(decodeObjectId(competitorId));
+		const competitorDocuments = await Promise.all<mongoose.Document>(tournamentDoc.get("competitors").map(competitorId => {
+			const competitor = db.models.Competitor.findById(competitorId);
 			if(!competitor) throw new Error(`Tournament contains invalid competitor ${competitorId}`);
 			return competitor;
 		})).catch(e => { throw e; });
 		const tournament = new TournamentModel<C>({
 			id,
-			owner: tournamentDoc.get("owner"),
+			owner: encodeObjectId(tournamentDoc.get("owner")),
 			meta: new TournamentMeta(tournamentDoc.get("meta")),
 			options: new TournamentOptions(tournamentDoc.get("options")),
 			time: tournamentDoc.get("time"),
 			competitors: competitorDocuments.map(competitorDoc => {
 				switch(competitorDoc.get("type")) {
 					case CompetitorType.PLAYER:
-						return new Player(competitorDoc.get("name"), competitorDoc.id);
+						return new Player(competitorDoc.get("name"), encodeObjectId(competitorDoc.id));
 					case CompetitorType.TEAM:
 						return new Team(
 							competitorDoc.get("name"),
 							competitorDoc.get("members"),
-							competitorDoc.id
+							encodeObjectId(competitorDoc.id)
 						)
 				}
 			}) as C[],
@@ -293,8 +302,7 @@ class TournamentDBAdapter<C extends Competitor> extends TournamentSyncAdapter<C>
 				]);
 			})()
 		});
-		const controller = new TournamentController(tournament, TournamentSyncType.DATABASE, db);
-		return [tournament, controller];
+		return tournament;
 	}
 
 	private static createMatchTree<C extends Competitor>(nodes: any[]) {
