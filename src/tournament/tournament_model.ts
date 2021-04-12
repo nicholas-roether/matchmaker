@@ -1,8 +1,8 @@
 import ChangeNotifier from "../utils/classes/change_notifier";
 import { collapseNestedArray, swapBetween } from "../utils/data_utils";
-import { Competitor } from "./competitor";
+import { Competitor, CompetitorType, Player, Team } from "./competitor";
 import TournamentLayout from "./tournament_layout";
-import { TournamentState } from "./tournament_state";
+import { FinishedTournamentState, GroupTournamentState, MainTournamentState, Match, MatchTreeNode, MatchTreeNodeState, QualificationTournamentState, Scoreboard, ScoreboardEntry, ScoredCompetitor, TournamentGroup, TournamentState } from "./tournament_state";
 
 export interface TournamentUserInit {
 	id: string;
@@ -128,6 +128,67 @@ export enum TournamentPhase {
 	FINISHED = "finished"
 }
 
+export type RawMatch = {
+	competitor: string;
+	score: number;
+}[]
+
+export interface RawTournamentGroup {
+	scoreboard: {
+		entries: {
+			competitor: string,
+			wins: number,
+			score: number
+		}[]
+	};
+	currentMatches: RawMatch[];
+}
+
+export interface RawTournamentTreeNode {
+	state: MatchTreeNodeState;
+	match: RawMatch;
+	children?: [RawTournamentTreeNode, RawTournamentTreeNode];
+}
+
+export interface RawTournament {
+	id: string;
+	owner: string;
+	meta: {
+		name: string,
+		description: string,
+		logo: string,
+	};
+	options: {
+		liveTracking: boolean
+	};
+	time?: Date;
+	competitorType: CompetitorType;
+	competitors: string[] | {name: string, members: string[]}[];
+	layout: TournamentLayout;
+	phase: TournamentPhase;
+	startingMatchups: string[][];
+	users: {
+		id: string,
+		name: string,
+		image: string,
+		isStreamer: boolean,
+		isModerator: boolean,
+		hidden: boolean
+	}[];
+	state: {
+		qualificationState?: RawTournamentGroup,
+		groupState?: {
+			groups: RawTournamentGroup[]
+		},
+		mainState?: {
+			tree: RawTournamentTreeNode
+		},
+		finishedState?: {
+			winner: string
+		}
+	}
+}
+
 export interface TournamentInit<C extends Competitor> {
 	id?: string;
 	owner: string;
@@ -143,7 +204,7 @@ export interface TournamentInit<C extends Competitor> {
 }
 
 class TournamentModel<C extends Competitor> extends ChangeNotifier {
-	public id?: string;
+	public id: string;
 	public readonly meta: TournamentMeta;
 	public readonly options: TournamentOptions;
 	public readonly competitors: C[];
@@ -156,14 +217,14 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 	private _users: TournamentUser[];
 
 	constructor({
-		id,
+		id = null,
 		owner,
 		meta,
 		options,
 		time,
 		competitors,
 		layout,
-		phase = TournamentPhase.FINISHED,
+		phase = TournamentPhase.PLANNED,
 		state = new TournamentState<C>(),
 		startingMatchups = null,
 		users = [],
@@ -251,6 +312,155 @@ class TournamentModel<C extends Competitor> extends ChangeNotifier {
 			if(!this.competitors.includes(competitor))
 				throw new Error(`Competitor '${competitor.name}' is not specified in competitor list`);
 		})
+	}
+
+	private toRawMatch(match: Match<C>) {
+		return [
+			{
+				competitor: match.entry1.competitor.name,
+				score: match.entry1.score
+			},
+			{
+				competitor: match.entry2.competitor.name,
+				score: match.entry2.score
+			}
+		];
+	}
+
+	private toRawGroup(group: TournamentGroup<C>) {
+		return {
+			scoreboard: {
+				entries: group.scoreboard.entries.map(e => ({
+					competitor: e.competitor.name,
+					wins: e.wins,
+					score: e.score
+				})),
+			},
+			currentMatches: group.currentMatches.map(m => this.toRawMatch(m)),
+		};
+	}
+
+	private toRawTreeNode(node: MatchTreeNode<C>) {
+		return {
+			state: node.state,
+			match: node.match ? this.toRawMatch(node.match) : null,
+			children: node.children?.map(c => this.toRawTreeNode(c))
+		}
+	}
+
+	public toRaw(): RawTournament {
+		return {
+			id: this.id,
+			owner: this.owner,
+			meta: {
+				name: this.meta.name,
+				description: this.meta.description,
+				logo: this.meta.logo
+			},
+			options: {
+				liveTracking: this.options.liveTracking
+			},
+			time: this.time,
+			// This is stupid
+			competitorType: "players" in this.competitors[0] ? CompetitorType.TEAM : CompetitorType.PLAYER,
+			competitors: this.competitors.map(c => {
+				if(c instanceof Team) return {name: c.name, members: c.players.map(p => p.name)};
+				return c.name;
+			}) as string[] | {name: string, members: string[]}[],
+			layout: this.layout,
+			phase: this.phase,
+			startingMatchups: this.startingMatchups?.map(m => m.map(c => c.name)),
+			users: this.users.map(u => ({
+				id: u.id,
+				name: u.name,
+				image: u.image,
+				isStreamer: u.isStreamer,
+				isModerator: u.isModerator,
+				hidden: u.hidden
+			})),
+			state: {
+				qualificationState: this.state.qualificationState ? this.toRawGroup(this.state.qualificationState) : null,
+				groupState: this.state.groupState ? {
+					groups: this.state.groupState.groups.map(group => this.toRawGroup(group))
+				} : null,
+				mainState: this.state.mainState ? {
+					tree: this.toRawTreeNode(this.state.mainState.tree)
+				} : null,
+				finishedState: this.state.finishedState ? {
+					winner: this.state.finishedState.winner.name
+				} : null
+			}
+		}
+	}
+
+	private static findCompetitor<C extends Competitor>(competitors: C[], name: string): C {
+		return competitors.find(c => c.name === name);
+	}
+
+	private static fromRawMatch<C extends Competitor>(rawMatch: RawMatch, competitors: C[]) {
+		return new Match<C>(
+			new ScoredCompetitor(this.findCompetitor(competitors, rawMatch[0].competitor), rawMatch[0].score),
+			new ScoredCompetitor(this.findCompetitor(competitors, rawMatch[1].competitor), rawMatch[1].score)
+		);
+	}
+
+	private static fromRawGroup<C extends Competitor>(rawGroup: RawTournamentGroup, numWinners: number, competitors: C[]) {
+		return new TournamentGroup(
+			new Scoreboard(rawGroup.scoreboard.entries.map(e => new ScoreboardEntry(this.findCompetitor(competitors, e.competitor), e.wins, e.score))),
+			numWinners,
+			rawGroup.currentMatches.map(m => this.fromRawMatch(m, competitors))
+		);
+	}
+
+	private static fromRawQualificationState<C extends Competitor>(rawGroup: RawTournamentGroup, numWinners: number, competitors: C[]) {
+		return new QualificationTournamentState(
+			new Scoreboard(rawGroup.scoreboard.entries.map(e => new ScoreboardEntry(this.findCompetitor(competitors, e.competitor), e.wins, e.score))),
+			numWinners,
+			rawGroup.currentMatches.map(m => this.fromRawMatch(m, competitors))
+		);
+	}
+
+	private static fromRawTreeNode<C extends Competitor>(rawNode: RawTournamentTreeNode, competitors: C[]): MatchTreeNode<C> {
+		return new MatchTreeNode(rawNode.children.map(c => this.fromRawTreeNode(c, competitors)) as [MatchTreeNode<C>, MatchTreeNode<C>], rawNode.state, this.fromRawMatch(rawNode.match, competitors))
+	}
+
+	public static fromRaw<C extends Competitor>(raw: RawTournament) {
+		const competitors = raw.competitors.map(c => {
+			if(raw.competitorType === CompetitorType.TEAM)
+				return new Team(c.name, c.members.map(m => new Player(m.name)), c.id);
+			return new Player(c.name, c.id);
+		}) as C[];
+		return new TournamentModel<C>({
+			id: raw.id,
+			owner: raw.owner,
+			meta: new TournamentMeta({
+				name: raw.meta.name,
+				description: raw.meta.description,
+				logo: raw.meta.logo
+			}),
+			options: new TournamentOptions({
+				liveTracking: raw.options.liveTracking
+			}),
+			time: raw.time,
+			competitors,
+			layout: new TournamentLayout(raw.layout),
+			phase: raw.phase,
+			startingMatchups: raw.startingMatchups.map(m => m.map(c => this.findCompetitor(competitors, c))),
+			users: raw.users.map(u => new TournamentUser(u)),
+			state: new TournamentState([
+				raw.state.qualificationState ? this.fromRawQualificationState(
+					raw.state.qualificationState,
+					raw.layout.competitorsAfterQualification,
+					competitors
+				) : null,
+				raw.state.groupState ? new GroupTournamentState(
+					raw.state.groupState.groups.map(g => this.fromRawGroup(g, raw.layout.winnersPerGroup, competitors)),
+					raw.layout.winnersPerGroup
+				) : null,
+				raw.state.mainState ? new MainTournamentState(this.fromRawTreeNode(raw.state.mainState.tree, competitors)) : null,
+				raw.state.finishedState ? new FinishedTournamentState(this.findCompetitor(competitors, raw.state.finishedState.winner)) : null
+			])
+		});
 	}
 }
 
