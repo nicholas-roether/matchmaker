@@ -143,7 +143,7 @@ export interface TournamentInit<C extends Competitor> {
 }
 
 class TournamentModel<C extends Competitor> extends ChangeNotifier {
-	public readonly id?: string;
+	public id?: string;
 	public readonly meta: TournamentMeta;
 	public readonly options: TournamentOptions;
 	public readonly competitors: C[];

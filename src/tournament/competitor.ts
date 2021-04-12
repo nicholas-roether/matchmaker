@@ -6,7 +6,7 @@ export enum CompetitorType {
 }
 
 abstract class Competitor extends ChangeNotifier {
-	public readonly id?: string;
+	public id?: string;
 	public readonly type: CompetitorType
 	private _name: string;
 
