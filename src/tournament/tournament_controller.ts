@@ -90,6 +90,11 @@ class TournamentController<C extends Competitor> {
 		this.adapter?.disconnect();
 	}
 
+	public async changeOwner(newOwner: string) {
+		this.tournament.owner = newOwner;
+		await this.save();
+	}
+
 	private async save() {
 		await this.adapter?.save();
 	}
